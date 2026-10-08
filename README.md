@@ -2,7 +2,7 @@
 
 ระบบนี้ทำนายความล้มเหลวของอุปกรณ์แต่ละ Part ใน **เครื่องล้างหม้อหุงและฝา** ของสายการผลิตข้าว โดยใช้ Digital Twin ร่วมกับ AI (LSTM-Autoencoder แบบ mode-aware)
 
-**เปิด Web App:** https://phongsakonvic.github.io/pm-twin/
+**เปิด Web App:** https://predictive-pm.github.io/
 
 ## ความสามารถ
 - ประสิทธิภาพและ Health ของอุปกรณ์ทั้ง 12 Part พร้อมภาพตัวอย่างอะไหล่
