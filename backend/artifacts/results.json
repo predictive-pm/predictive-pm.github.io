@@ -1,0 +1,150 @@
+{
+  "LSTM-AE (mode-aware)": {
+    "name": "LSTM-AE (mode-aware)",
+    "percentile": 99.9,
+    "thresholds": {
+      "ramp": 0.8760724254846578,
+      "run": 0.8093148946762093
+    },
+    "k": 5,
+    "val_fa_per_week": 0.425,
+    "AP": 0.85,
+    "event_precision": 0.667,
+    "event_recall": 1.0,
+    "event_F0.5": 0.714,
+    "FA_per_week": 0.215,
+    "lead_time_h": [
+      9.38
+    ],
+    "first_alarm_idx": 237665,
+    "first_alarm_dt": "2026-07-16 10:25:00",
+    "test_alarm_episodes": 3
+  },
+  "LSTM-AE (mode-blind)": {
+    "name": "LSTM-AE (mode-blind)",
+    "percentile": 99.9,
+    "thresholds": {
+      "all": 0.7693369531631491
+    },
+    "k": 5,
+    "val_fa_per_week": 0.212,
+    "AP": 0.915,
+    "event_precision": 0.6,
+    "event_recall": 1.0,
+    "event_F0.5": 0.652,
+    "FA_per_week": 0.431,
+    "lead_time_h": [
+      11.3
+    ],
+    "first_alarm_idx": 237550,
+    "first_alarm_dt": "2026-07-16 08:30:00",
+    "test_alarm_episodes": 5
+  },
+  "PCA": {
+    "name": "PCA",
+    "percentile": 99.9,
+    "thresholds": {
+      "ramp": 0.3817375787340113,
+      "run": 0.3012196225350106
+    },
+    "k": 5,
+    "val_fa_per_week": 0.425,
+    "AP": 0.0154,
+    "event_precision": 0.0,
+    "event_recall": 0.0,
+    "event_F0.5": 0.0,
+    "FA_per_week": 0.431,
+    "lead_time_h": [],
+    "first_alarm_idx": null,
+    "first_alarm_dt": null,
+    "test_alarm_episodes": 2
+  },
+  "Isolation Forest": {
+    "name": "Isolation Forest",
+    "percentile": 99.9,
+    "thresholds": {
+      "ramp": 0.5810960213563497,
+      "run": 0.5649978420549847
+    },
+    "k": 5,
+    "val_fa_per_week": 0.0,
+    "AP": 0.0677,
+    "event_precision": 0.0,
+    "event_recall": 0.0,
+    "event_F0.5": 0.0,
+    "FA_per_week": 0.0,
+    "lead_time_h": [],
+    "first_alarm_idx": null,
+    "first_alarm_dt": null,
+    "test_alarm_episodes": 0
+  },
+  "Moving std rule": {
+    "name": "Moving std rule",
+    "percentile": 99.9,
+    "thresholds": {
+      "ramp": 1.1898876114248709,
+      "run": 1.1469887898970106
+    },
+    "k": 5,
+    "val_fa_per_week": 0.425,
+    "AP": 0.5223,
+    "event_precision": 0.75,
+    "event_recall": 1.0,
+    "event_F0.5": 0.789,
+    "FA_per_week": 0.215,
+    "lead_time_h": [
+      8.93
+    ],
+    "first_alarm_idx": 237692,
+    "first_alarm_dt": "2026-07-16 10:52:00",
+    "test_alarm_episodes": 4
+  },
+  "_localization": [
+    {
+      "event": "2026-07-16 19:48:00",
+      "top_channels": [
+        "RevArmOut_NoLoad",
+        "RevArmOut_Load",
+        "RevArmIn_Load"
+      ],
+      "top_devices": [
+        "RAO",
+        "RAI",
+        "P1"
+      ],
+      "channel_ratio": {
+        "RevArmOut_NoLoad": 18.25,
+        "RevArmOut_Load": 14.78,
+        "RevArmIn_Load": 0.65,
+        "Pump1_Load": 0.63,
+        "Pump2_Load": 0.6,
+        "Conveyor1_Load": 0.6,
+        "Conveyor2_NoLoad": 0.59,
+        "RevArmIn_NoLoad": 0.59,
+        "Conveyor2_Load": 0.59,
+        "Valve1_TempVal": 0.54,
+        "Valve2_TempVal": 0.51,
+        "Valve3_TempVal": 0.38,
+        "Pump3_Load": 0.36,
+        "Pump4_Load": 0.35,
+        "Valve4_TempVal": 0.22,
+        "Conveyor1_Speed": 0.13
+      }
+    }
+  ],
+  "_events": [
+    {
+      "start": 238227,
+      "t_fail": 238228,
+      "end": 238374,
+      "t_fail_dt": "2026-07-16 19:48:00",
+      "duration_min": 148
+    }
+  ],
+  "_config": {
+    "k": 5,
+    "horizon_h": 12.0,
+    "fa_target": 1.0,
+    "test_weeks": 4.96
+  }
+}

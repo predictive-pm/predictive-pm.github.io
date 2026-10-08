@@ -1,0 +1,8 @@
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.4
+keras>=3.3
+jax[cpu]>=0.4      # or tensorflow / torch as Keras backend
+fastapi>=0.110
+uvicorn>=0.29
+pyodbc>=5.0        # optional: SQL Server poller

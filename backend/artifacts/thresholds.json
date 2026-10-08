@@ -1,0 +1,43 @@
+{
+  "mode_aware": {
+    "ramp": 0.8760724254846578,
+    "run": 0.8093148946762093
+  },
+  "k": 5,
+  "channel_ref_p999": [
+    1.5328889179229739,
+    1.140496454238894,
+    1.5955429506301884,
+    1.5898284673690797,
+    1.5949828433990485,
+    1.6039379596710217,
+    1.5805974340438844,
+    1.5796544599533082,
+    0.9971364593505869,
+    1.3421318864822398,
+    1.1838185262680094,
+    1.1589402723312379,
+    0.7130771946907066,
+    0.5812124991416953,
+    0.6684481477737454,
+    1.2599754810333272
+  ],
+  "channels": [
+    "Conveyor1_Load",
+    "Conveyor1_Speed",
+    "Conveyor2_Load",
+    "Conveyor2_NoLoad",
+    "RevArmIn_Load",
+    "RevArmIn_NoLoad",
+    "RevArmOut_Load",
+    "RevArmOut_NoLoad",
+    "Pump1_Load",
+    "Pump2_Load",
+    "Pump3_Load",
+    "Pump4_Load",
+    "Valve1_TempVal",
+    "Valve2_TempVal",
+    "Valve3_TempVal",
+    "Valve4_TempVal"
+  ]
+}

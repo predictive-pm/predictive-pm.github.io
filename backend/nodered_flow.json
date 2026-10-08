@@ -1,0 +1,6 @@
+[
+  {"id":"pm_inject","type":"inject","name":"every 1 min","repeat":"60","crontab":"","once":true,"wires":[["pm_build"]]},
+  {"id":"pm_build","type":"function","name":"Build sensor row","func":"// map your Modbus/SQL values into the CSV column names\nconst v = flow.get('latest') || {};\nmsg.payload = Object.assign({ dt: new Date().toISOString().slice(0,19).replace('T',' ') }, v);\nmsg.headers = {'Content-Type':'application/json'};\nreturn msg;","outputs":1,"wires":[["pm_post"]]},
+  {"id":"pm_post","type":"http request","name":"POST PM·TWIN ingest","method":"POST","ret":"obj","url":"http://<pm-twin-host>:8000/api/v1/ingest","wires":[["pm_debug"]]},
+  {"id":"pm_debug","type":"debug","name":"twin state","active":true,"complete":"payload"}
+]
