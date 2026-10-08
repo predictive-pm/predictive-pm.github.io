@@ -1,0 +1,1522 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM·TWIN — Predictive Maintenance · เครื่องล้างหม้อหุงและฝา</title>
+<meta name="description" content="Digital Twin + AI (LSTM-Autoencoder) Predictive Maintenance dashboard for the pot & lid washing machine.">
+<meta property="og:title" content="PM·TWIN — Predictive Maintenance Digital Twin">
+<meta property="og:description" content="ทำนายความล้มเหลวของอุปกรณ์รายส่วน · LSTM-Autoencoder · Digital Twin">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpolygon points='20,2 36,11 36,29 20,38 4,29 4,11' fill='%230A0E13' stroke='%2322D3EE' stroke-width='3'/%3E%3Ccircle cx='20' cy='20' r='5' fill='%2322D3EE'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&amp;family=IBM+Plex+Sans+Thai:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0E13}
+a{color:#67E8F9}a:hover{color:#A5F3FC}
+*{box-sizing:border-box}
+.app{min-height:100vh;color:#E6EDF3;font-family:'IBM Plex Sans Thai','Chakra Petch',system-ui,sans-serif;font-size:14px;line-height:1.5;background-color:#0A0E13;background-image:linear-gradient(rgba(34,211,238,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.04) 1px,transparent 1px);background-size:32px 32px}
+.disp{font-family:'Chakra Petch','IBM Plex Sans Thai',system-ui,sans-serif}
+.mono{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.panel{background:rgba(15,21,28,.94);border:1px solid #223040;border-radius:10px;position:relative;padding:18px}
+.panel::before{content:"";position:absolute;left:-1px;top:-1px;width:14px;height:14px;border-left:2px solid #22D3EE;border-top:2px solid #22D3EE;border-top-left-radius:10px;opacity:.8}
+.panel::after{content:"";position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;border-right:2px solid #22D3EE;border-bottom:2px solid #22D3EE;border-bottom-right-radius:10px;opacity:.5}
+.lbl{font-family:'Chakra Petch',system-ui,sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#93A4B6}
+.h2{font-family:'Chakra Petch',system-ui,sans-serif;font-size:18px;font-weight:600;margin:0;color:#F1F6FA}
+.muted{color:#93A4B6}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid #2A3A4C;background:#121A23;color:#D5E0EA;font:inherit;font-size:13px;cursor:pointer;transition:background .15s,border-color .15s}
+.btn:hover{background:#18222D;border-color:#3B5068}
+.btn.on{background:rgba(34,211,238,.14);border-color:#22D3EE;color:#E6FBFF}
+.btn-primary{background:#0E7490;border-color:#22D3EE;color:#fff}
+.btn-primary:hover{background:#0B8AAB}
+.nav-btn{display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:8px 12px;border-radius:8px;border:1px solid transparent;background:transparent;color:#B6C4D2;font:inherit;text-align:left;cursor:pointer;transition:background .15s,color .15s}
+.nav-btn:hover{background:#121A23;color:#fff}
+.nav-btn.active{background:rgba(34,211,238,.10);border-color:rgba(34,211,238,.4);color:#E6FBFF;box-shadow:inset 3px 0 0 #22D3EE}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-family:'Chakra Petch',sans-serif;letter-spacing:.06em;border:1px solid #2A3A4C;white-space:nowrap}
+.st-ok{color:#6EE7B7;border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.08)}
+.st-warn{color:#FCD34D;border-color:rgba(251,191,36,.55);background:rgba(251,191,36,.08)}
+.st-crit{color:#FFB4AC;border-color:rgba(255,90,78,.7);background:rgba(255,90,78,.12)}
+.st-off{color:#A9B6C4;border-color:#2A3A4C;background:#121A23}
+.st-info{color:#A5F3FC;border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.08)}
+.mode-run{color:#6EE7B7;border-color:#34D399}
+.mode-ramp{color:#93C5FD;border-color:#60A5FA}
+.mode-stop{color:#CBD5E1;border-color:#64748B}
+.mode-fault{color:#fff;border-color:#FF5A4E;background:#7F1D1D;animation:blink 1s steps(2) infinite}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#34D399;box-shadow:0 0 0 0 rgba(52,211,153,.7);animation:ping 1.6s infinite}
+.kpi{font-family:'Chakra Petch',sans-serif;font-size:34px;font-weight:600;line-height:1.1;color:#F8FBFD}
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:14px}
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:14px}
+.bar{height:6px;background:#1A2430;border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;transition:width .6s ease}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-family:'Chakra Petch',sans-serif;font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#93A4B6;padding:8px 10px;border-bottom:1px solid #223040;white-space:nowrap}
+.tbl td{padding:9px 10px;border-bottom:1px solid #18222D;vertical-align:top}
+.tbl tr.hl td{background:rgba(34,211,238,.06)}
+.trow{display:grid;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid #18222D;font-size:13px}
+.trow.hl{background:rgba(34,211,238,.07)}
+.thd{font-family:'Chakra Petch',sans-serif;font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#93A4B6;border-bottom-color:#223040}
+.scroll-x{overflow-x:auto}
+.screen{animation:fadeUp .35s ease both}
+.card-btn{display:flex;flex-direction:column;gap:10px;text-align:left;width:100%;padding:14px;border-radius:10px;border:1px solid #223040;background:rgba(15,21,28,.94);color:inherit;font:inherit;cursor:pointer;transition:border-color .15s,transform .15s}
+.card-btn:hover{border-color:#3B5068;transform:translateY(-2px)}
+.card-btn.sel{border-color:#22D3EE;box-shadow:0 0 0 1px #22D3EE,0 0 24px rgba(34,211,238,.15)}
+.card-btn.crit{border-color:rgba(255,90,78,.8);animation:critGlow 1.6s ease-in-out infinite}
+.row-btn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid #1B2632;background:#0F151C;color:inherit;font:inherit;cursor:pointer}
+.row-btn:hover{border-color:#3B5068}
+.row-btn.sel{border-color:#22D3EE;background:rgba(34,211,238,.06)}
+.banner{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 18px;border-radius:10px;border:1px solid}
+.banner-crit{background:#2A0D0B;border-color:#FF5A4E;animation:critGlow 1.2s ease-in-out infinite}
+.banner-warn{background:#261C06;border-color:#F59E0B}
+.banner-info{background:#06212A;border-color:#22D3EE}
+.banner-crit .b-ico{color:#FF5A4E;animation:blink 1s steps(2) infinite}
+.banner-warn .b-ico{color:#FBBF24}
+.banner-info .b-ico{color:#22D3EE}
+.countdown{font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.twin{position:relative;width:100%}
+.twin .ov{position:absolute;inset:0}
+.hot{position:absolute;transform:translate(-50%,-50%);min-width:48px;height:30px;padding:0 10px;border-radius:15px;border:1.5px solid;background:rgba(10,14,19,.9);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.hot-ok{border-color:#34D399;color:#A7F3D0}
+.hot-warn{border-color:#FBBF24;color:#FDE68A;animation:pulseAmber 1.8s infinite}
+.hot-crit{border-color:#FF5A4E;color:#FFE1DE;background:#3A0F0C;animation:pulseRed 1s infinite}
+.hot-off{border-color:#64748B;color:#CBD5E1}
+.hot.sel{outline:2px solid #22D3EE;outline-offset:3px}
+.belt{animation:belt .9s linear infinite}
+.steam{animation:belt 1.6s linear infinite}
+.spray{animation:spray .8s ease-in-out infinite alternate}
+.pot{animation:pot 10s linear infinite}
+.pot2{animation:pot 10s linear -5s infinite}
+.swing{transform-box:fill-box;transform-origin:0% 100%;animation:swing 3.2s ease-in-out infinite}
+.twin.paused .belt,.twin.paused .steam,.twin.paused .spray,.twin.paused .pot,.twin.paused .pot2,.twin.paused .swing{animation-play-state:paused}
+.seg{position:absolute;top:0;bottom:0}
+.seg-run{background:rgba(45,212,191,.55)}
+.seg-ramp{background:rgba(96,165,250,.7)}
+.seg-planned_stop{background:repeating-linear-gradient(135deg,#334155 0 4px,#1E293B 4px 8px)}
+.seg-stop{background:#F59E0B}
+.seg-fault{background:#FF5A4E}
+.scan{position:absolute;left:0;right:0;height:60px;top:-60px;background:linear-gradient(180deg,transparent,rgba(34,211,238,.06),transparent);animation:scan 6s linear infinite;pointer-events:none}
+input[type=range]{width:100%;accent-color:#22D3EE;height:28px;cursor:pointer}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes blink{50%{opacity:.25}}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(52,211,153,.7)}80%,100%{box-shadow:0 0 0 8px rgba(52,211,153,0)}}
+@keyframes pulseRed{0%{box-shadow:0 0 0 0 rgba(255,90,78,.8)}100%{box-shadow:0 0 0 14px rgba(255,90,78,0)}}
+@keyframes pulseAmber{0%{box-shadow:0 0 0 0 rgba(251,191,36,.6)}100%{box-shadow:0 0 0 10px rgba(251,191,36,0)}}
+@keyframes critGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,90,78,0)}50%{box-shadow:0 0 28px 0 rgba(255,90,78,.35)}}
+@keyframes belt{to{stroke-dashoffset:-24}}
+@keyframes spray{from{opacity:.15}to{opacity:.75}}
+@keyframes pot{from{transform:translateX(0)}to{transform:translateX(470px)}}
+@keyframes swing{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-28deg)}}
+@keyframes scan{to{top:100%}}
+@media (prefers-reduced-motion: reduce){.belt,.steam,.spray,.pot,.pot2,.swing,.scan,.hot-crit,.hot-warn,.banner-crit,.card-btn.crit,.mode-fault,.live-dot{animation:none}}
+</style>
+
+<style>[v-cloak]{display:none}</style>
+</head>
+<body>
+<div id="app" v-cloak></div>
+<script type="text/x-template" id="tpl">
+
+
+<div class="app">
+
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; padding: 14px 24px; border-bottom: 1px solid #1B2632; background: rgba(10,14,19,.92); position: relative; overflow: hidden">
+  <div class="scan"></div>
+  <div style="display: flex; align-items: center; gap: 12px">
+    <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" :stroke="v.accent" style="stroke-width: 2"></polygon>
+      <polygon points="20,10 28,15 28,25 20,30 12,25 12,15" :fill="v.accent" opacity="0.18" :stroke="v.accent" style="stroke-width: 1.5"></polygon>
+      <circle cx="20" cy="20" r="3.5" :fill="v.accent"></circle>
+    </svg>
+    <div style="display: flex; flex-direction: column">
+      <span class="disp" style="font-size: 20px; font-weight: 700; letter-spacing: .08em; color: #F8FBFD">PM·TWIN</span>
+      <span class="lbl" style="font-size: 10px">Predictive Maintenance · Digital Twin</span>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; min-width: 220px">
+    <span style="font-weight: 600; color: #F1F6FA">เครื่องล้างหม้อหุงและฝา</span>
+    <span class="muted" style="font-size: 12px">Pot &amp; Lid Washing Machine · Rice Production &amp; Cooking Line</span>
+  </div>
+  <div style="display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap">
+    <span class="chip st-info"><span class="live-dot"></span>{{ v.srcLabel }}</span>
+    <span :class="`chip ${v.modeCls}`">{{ v.modeEn }} · {{ v.modeTh }}</span>
+    <div style="display: flex; flex-direction: column; align-items: flex-end">
+      <span class="mono" style="font-size: 24px; font-weight: 600; color: #F8FBFD; line-height: 1">{{ v.clockTime }}<span style="font-size: 15px; color: #93A4B6">{{ v.clockSec }}</span></span>
+      <span class="muted" style="font-size: 12px">{{ v.clockDate }}</span>
+    </div>
+  </div>
+</header>
+
+<template v-if="v.loading">
+  <div style="padding: 80px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px">
+    <span class="live-dot"></span>
+    <span class="muted">กำลังโหลดผลการทำนายจากโมเดล LSTM-Autoencoder…</span>
+  </div>
+</template>
+<template v-if="v.err">
+  <div style="padding: 80px 24px; text-align: center; color: #FFB4AC">โหลดข้อมูลไม่สำเร็จ: {{ v.err }}</div>
+</template>
+
+<template v-if="v.ready">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start">
+
+
+<nav aria-label="เมนูหลัก" style="flex: 1 1 230px; max-width: 100%; padding: 18px 14px; display: flex; flex-direction: column; gap: 4px">
+  <span class="lbl" style="padding: 4px 12px 8px">เมนู</span>
+  <template v-for="(t, $index) in (v.tabs || [])">
+    <button :class="t.cls" @click="t.go">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" style="stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none" aria-hidden="true"><path :d="t.icon"></path></svg>
+      <span style="display: flex; flex-direction: column; line-height: 1.25">
+        <span style="font-size: 14px">{{ t.th }}</span>
+        <span class="lbl" style="font-size: 9.5px; letter-spacing: .1em">{{ t.en }}</span>
+      </span>
+      <template v-if="t.badge"><span class="chip st-crit" style="margin-left: auto; padding: 1px 8px">{{ t.badge }}</span></template>
+    </button>
+  </template>
+
+  <div class="panel" style="margin-top: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+    <span class="lbl">Data Control</span>
+    <template v-if="v.isLive">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span class="chip st-ok" style="align-self: flex-start"><span class="live-dot"></span>LIVE · ตามเวลาประเทศไทย</span>
+        <span class="muted" style="font-size: 11.5px">{{ v.liveNote }}</span>
+        <button class="btn" @click="v.goReplay">เปลี่ยนเป็นโหมด Replay</button>
+      </div>
+    </template>
+    <template v-if="v.isReplay">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <button class="btn btn-primary" @click="v.goLive">กลับสู่ LIVE (เวลาไทย)</button>
+        <div style="display: flex; gap: 8px">
+          <button class="btn" @click="v.togglePlay" :aria-label="v.playLabel" style="flex: 1">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" style="stroke-width: 2; stroke-linejoin: round" aria-hidden="true"><path :d="v.playIcon"></path></svg>
+            {{ v.playLabel }}
+          </button>
+        </div>
+        <div style="display: flex; gap: 6px">
+          <template v-for="(sp, $index) in (v.speeds || [])">
+            <button :class="sp.cls" @click="sp.set" style="flex: 1; padding: 0 6px">{{ sp.label }}</button>
+          </template>
+        </div>
+      </div>
+    </template>
+    <input type="range" min="0" :max="v.maxFrame" :value="v.frame" @input="v.onScrub" aria-label="เลื่อนเวลา Replay">
+    <div style="display: flex; justify-content: space-between; font-size: 11px" class="mono muted"><span>{{ v.replayStartLbl }}</span><span>{{ v.replayEndLbl }}</span></div>
+    <span class="lbl" style="margin-top: 4px">ข้ามไปยังเหตุการณ์</span>
+    <template v-for="(j, $index) in (v.jumps || [])">
+      <button class="btn" @click="j.go" style="justify-content: flex-start; min-height: 36px; font-size: 12px"><span class="mono" style="color: #67E8F9">{{ j.time }}</span>{{ j.label }}</button>
+    </template>
+    <p class="muted" style="font-size: 11.5px; margin: 4px 0 0">กดข้ามเหตุการณ์หรือเลื่อนแถบเวลาเพื่อเข้าสู่โหมด Replay · เมื่อเชื่อม API กับ Node-RED / SQL Server ข้อมูล LIVE จะมาจากเครื่องจริง</p>
+  </div>
+</nav>
+
+
+<main style="flex: 999 1 640px; min-width: 0; padding: 18px 24px 40px; display: flex; flex-direction: column; gap: 18px">
+
+<template v-if="v.banner.show">
+  <div :class="v.banner.cls" role="alert">
+    <svg class="b-ico" viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none" aria-hidden="true"><path d="M12 3l10 18H2z"></path><path d="M12 10v5"></path><path d="M12 18v.5"></path></svg>
+    <div style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 360px; min-width: 0">
+      <span class="disp" style="font-size: 18px; font-weight: 700; color: #fff">{{ v.banner.title }}</span>
+      <span style="color: #E6EDF3">{{ v.banner.text }}</span>
+    </div>
+    <template v-if="v.banner.hasCount">
+      <div style="display: flex; flex-direction: column; align-items: flex-end">
+        <span class="lbl">Time to failure</span>
+        <span class="countdown" style="color: #fff">{{ v.banner.count }}</span>
+      </div>
+    </template>
+  </div>
+</template>
+
+
+<template v-if="v.scr.overview">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">ภาพรวมเครื่องจักร</h1>
+    <span class="lbl">Machine Overview · Digital Twin State</span>
+  </div>
+  <div class="grid-auto">
+    <div class="panel" style="display: flex; align-items: center; gap: 16px">
+      <div style="position: relative; width: 92px; height: 92px; flex: none">
+        <svg viewBox="0 0 100 100" width="92" height="92" aria-hidden="true" style="display: block">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#1A2430" style="stroke-width: 9"></circle>
+          <circle cx="50" cy="50" r="42" fill="none" :stroke="v.kpi.healthColor" transform="rotate(-90 50 50)" :style="`stroke-width: 9; stroke-linecap: round; stroke-dasharray: ${v.kpi.healthDash}; transition: stroke-dasharray .6s`"></circle>
+        </svg>
+        <span class="disp" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; color: #F8FBFD">{{ v.kpi.healthStr }}</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <span class="lbl">Machine Health</span>
+        <span style="font-weight: 600">สุขภาพเครื่องจักรรวม</span>
+        <span :class="`chip ${v.kpi.healthCls}`" style="align-self: flex-start">{{ v.kpi.healthTh }}</span>
+      </div>
+    </div>
+    <div class="panel" style="display: flex; flex-direction: column; gap: 6px">
+      <span class="lbl">Availability วันนี้</span>
+      <span class="kpi">{{ v.kpi.avail }}</span>
+      <span class="muted" style="font-size: 12px">เดินเครื่อง {{ v.kpi.runToday }} · ไม่นับช่วงพักตามแผน</span>
+    </div>
+    <div class="panel" style="display: flex; flex-direction: column; gap: 6px">
+      <span class="lbl">Active Alerts</span>
+      <span class="kpi" :style="`color: ${v.kpi.alertColor}`">{{ v.kpi.alerts }}</span>
+      <span class="muted" style="font-size: 12px">วิกฤต {{ v.kpi.nCrit }} · เฝ้าระวัง {{ v.kpi.nWarn }} · ปกติ {{ v.kpi.nOk }} Part</span>
+    </div>
+    <div class="panel" style="display: flex; flex-direction: column; gap: 6px">
+      <span class="lbl">AI Model Accuracy (AP)</span>
+      <span class="kpi">{{ v.kpi.ap }}</span>
+      <span class="muted" style="font-size: 12px">LSTM-Autoencoder · แจ้งล่วงหน้า {{ v.kpi.lead }}</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 18px">
+    <div class="panel" style="flex: 3 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px">
+        <h2 class="h2">Anomaly Score (Real-time)</h2>
+        <span class="muted" style="font-size: 12px">e(t) / threshold ของโหมดปัจจุบัน · 4 ชั่วโมงล่าสุด · log scale</span>
+      </div>
+      <svg viewBox="0 0 640 200" width="100%" style="display: block" aria-label="กราฟ Anomaly score">
+        <template v-for="(yt, $index) in (v.scoreChart.yTicks || [])">
+          <line x1="36" x2="630" :y1="yt.y" :y2="yt.y" stroke="#1B2632"></line>
+          <text x="30" :y="yt.y" fill="#93A4B6" style="font-family: 'JetBrains Mono'; font-size: 10px; text-anchor: end; dominant-baseline: middle">{{ yt.label }}</text>
+        </template>
+        <template v-for="(ar, $index) in (v.scoreChart.alarmRects || [])">
+          <rect :x="ar.x" y="14" :width="ar.w" height="172" fill="#FF5A4E" opacity="0.10"></rect>
+        </template>
+        <line x1="36" x2="630" :y1="v.scoreChart.thrY" :y2="v.scoreChart.thrY" stroke="#FBBF24" style="stroke-width: 1.5; stroke-dasharray: 6 4"></line>
+        <text x="626" :y="v.scoreChart.thrLblY" fill="#FCD34D" style="font-family: 'Chakra Petch'; font-size: 11px; text-anchor: end">Threshold (mode-specific)</text>
+        <path :d="v.scoreChart.path" fill="none" :stroke="v.accent" style="stroke-width: 1.8; stroke-linejoin: round"></path>
+        <circle :cx="v.scoreChart.lastX" :cy="v.scoreChart.lastY" r="4.5" :fill="v.scoreChart.lastColor"></circle>
+        <template v-for="(xt, $index) in (v.scoreChart.xTicks || [])">
+          <text :x="xt.x" y="198" fill="#93A4B6" style="font-family: 'JetBrains Mono'; font-size: 10px; text-anchor: middle">{{ xt.label }}</text>
+        </template>
+      </svg>
+    </div>
+    <div class="panel" style="flex: 2 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+      <h2 class="h2">อุปกรณ์ที่มีความเสี่ยงสูงสุด</h2>
+      <template v-for="(tr, $index) in (v.topRisk || [])">
+        <button class="row-btn" @click="tr.go">
+          <span class="dot" :style="`background: ${tr.color}`"></span>
+          <span style="display: flex; flex-direction: column; flex: 1; min-width: 0">
+            <span style="font-weight: 600">{{ tr.name }}</span>
+            <span class="muted" style="font-size: 12px">{{ tr.th }} · RUL {{ tr.rul }}</span>
+          </span>
+          <span class="mono" :style="`font-size: 18px; color: ${tr.color}`">{{ tr.health }}</span>
+        </button>
+      </template>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1B2632; padding-top: 12px; gap: 10px; flex-wrap: wrap">
+        <span class="muted" style="font-size: 12px">ช่วงพักตามแผนครั้งถัดไป</span>
+        <span class="mono" style="font-size: 18px; color: #F1F6FA">{{ v.nextBreak }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 18px">
+    <div class="panel" style="flex: 3 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px">
+        <h2 class="h2">Digital Twin State · 12 Parts</h2>
+        <button class="btn" @click="v.goLayout" style="min-height: 34px">ดูตำแหน่งบนเครื่องจักร</button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 8px">
+        <template v-for="(dv, $index) in (v.devices || [])">
+          <button class="row-btn" @click="dv.go" style="flex-direction: column; align-items: stretch; gap: 6px; padding: 10px">
+            <span style="display: flex; justify-content: space-between; align-items: center"><span class="mono" style="font-size: 12px; color: #93A4B6">{{ dv.id }}</span><span class="dot" :style="`background: ${dv.color}`"></span></span>
+            <span style="font-size: 12.5px; line-height: 1.3">{{ dv.th }}</span>
+            <span class="bar"><i :style="`width: ${dv.healthPct}%; background: ${dv.color}`"></i></span>
+            <span class="mono" :style="`font-size: 12px; color: ${dv.color}`">{{ dv.health }}</span>
+          </button>
+        </template>
+      </div>
+    </div>
+    <div class="panel" style="flex: 2 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <h2 class="h2">ความเคลื่อนไหวล่าสุด</h2>
+        <button class="btn" @click="v.goReport" style="min-height: 34px">ทั้งหมด</button>
+      </div>
+      <template v-for="(ac, $index) in (v.actsShort || [])">
+        <div style="display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #18222D">
+          <span class="mono" style="font-size: 12px; color: #93A4B6; flex: none; width: 44px">{{ ac.time }}</span>
+          <span class="dot" :style="`background: ${ac.color}; margin-top: 7px`"></span>
+          <span style="font-size: 13px">{{ ac.text }}</span>
+        </div>
+      </template>
+      <template v-if="v.noActs"><span class="muted">ยังไม่มีเหตุการณ์</span></template>
+    </div>
+  </div>
+</section>
+</template>
+
+
+<template v-if="v.scr.health">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">ประสิทธิภาพอุปกรณ์แต่ละ Part</h1>
+    <span class="lbl">Part Performance · Health Index</span>
+  </div>
+  <p class="muted" style="margin: 0; max-width: 900px">Health % คำนวณจาก Reconstruction error รายช่องสัญญาณ e<sub>j</sub>(t) ของโมเดล (Eq. 3) เทียบกับค่าปกติของช่วง Train · Load Efficiency = 100 − |ΔLoad| เทียบค่าเฉลี่ยขณะทำงานปกติ</p>
+  <div class="grid-cards">
+    <template v-for="(c, $index) in (v.devCards || [])">
+      <button :class="c.cls" @click="c.go">
+        <span style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; width: 100%">
+          <span style="display: flex; flex-direction: column; min-width: 0">
+            <span class="mono" style="font-size: 12px; color: #93A4B6">{{ c.id }} · {{ c.subsystem }}</span>
+            <span style="font-weight: 600; line-height: 1.3">{{ c.name }}</span>
+            <span class="muted" style="font-size: 12.5px">{{ c.th }}</span>
+          </span>
+          <span :class="`chip ${c.stCls}`">{{ c.stTh }}</span>
+        </span>
+        <span style="display: flex; align-items: center; gap: 12px; width: 100%">
+          <span style="width: 92px; height: 64px; flex: none; display: flex; align-items: center; justify-content: center; background: #0B1117; border: 1px solid #1B2632; border-radius: 8px">
+            <template v-if="c.isMotor">
+              <svg viewBox="0 0 160 110" width="84" height="58" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2.5; stroke-linejoin: round"><rect x="10" y="40" width="12" height="30" rx="3" fill="#202C3A"></rect><rect x="22" y="30" width="68" height="50" rx="8" fill="#1A2430"></rect><path d="M34 30v50M46 30v50M58 30v50M70 30v50" stroke="#2F4154"></path><rect x="46" y="17" width="24" height="13" rx="2" fill="#202C3A"></rect><rect x="90" y="36" width="34" height="38" rx="4" fill="#202C3A"></rect><rect x="124" y="50" width="24" height="10" rx="2" fill="#22D3EE" stroke="#22D3EE"></rect><path d="M28 80l-8 14h80l-8-14"></path></g></svg>
+            </template>
+            <template v-if="c.isPump">
+              <svg viewBox="0 0 160 110" width="84" height="58" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2.5; stroke-linejoin: round"><rect x="8" y="50" width="32" height="16" fill="#202C3A"></rect><circle cx="68" cy="58" r="30" fill="#1A2430"></circle><path d="M68 58m-16 0a16 16 0 1 0 16-16" stroke="#22D3EE"></path><rect x="60" y="14" width="16" height="16" fill="#202C3A"></rect><rect x="54" y="8" width="28" height="7" rx="2" fill="#202C3A"></rect><rect x="98" y="40" width="48" height="34" rx="6" fill="#1A2430"></rect><path d="M108 40v34M118 40v34M128 40v34" stroke="#2F4154"></path><rect x="20" y="92" width="130" height="8" rx="2" fill="#202C3A"></rect></g></svg>
+            </template>
+            <template v-if="c.isValve">
+              <svg viewBox="0 0 160 110" width="84" height="58" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2.5; stroke-linejoin: round"><rect x="10" y="62" width="40" height="18" fill="#202C3A"></rect><rect x="110" y="62" width="40" height="18" fill="#202C3A"></rect><rect x="44" y="56" width="8" height="30" rx="2" fill="#2A3A4C"></rect><rect x="108" y="56" width="8" height="30" rx="2" fill="#2A3A4C"></rect><ellipse cx="80" cy="71" rx="28" ry="20" fill="#1A2430"></ellipse><rect x="72" y="36" width="16" height="16" fill="#202C3A"></rect><path d="M80 22v14" stroke="#22D3EE"></path><path d="M50 22a30 16 0 0 1 60 0z" fill="#202C3A"></path></g></svg>
+            </template>
+            <template v-if="c.isArm">
+              <svg viewBox="0 0 160 110" width="84" height="58" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2.5; stroke-linejoin: round"><rect x="14" y="58" width="48" height="40" rx="6" fill="#1A2430"></rect><rect x="62" y="66" width="30" height="26" rx="4" fill="#202C3A"></rect><path d="M38 58L128 22" stroke="#2F4154" style="stroke-width: 9; stroke-linecap: round"></path><circle cx="38" cy="58" r="11" fill="#202C3A"></circle><circle cx="128" cy="22" r="6" fill="#202C3A" stroke="#22D3EE"></circle><path d="M128 22l14 10M128 22l4-15" stroke="#22D3EE"></path></g></svg>
+            </template>
+          </span>
+          <span style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0">
+            <span style="display: flex; justify-content: space-between"><span class="lbl">Health</span><span class="mono" :style="`color: ${c.color}; font-weight: 600`">{{ c.health }}</span></span>
+            <span class="bar"><i :style="`width: ${c.healthPct}%; background: ${c.color}`"></i></span>
+            <span style="display: flex; justify-content: space-between; font-size: 12px"><span class="muted">Load Eff.</span><span class="mono">{{ c.eff }}</span></span>
+            <span style="display: flex; justify-content: space-between; font-size: 12px"><span class="muted">ΔLoad</span><span class="mono">{{ c.dLoad }}</span></span>
+          </span>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 4px; width: 100%">
+          <span style="display: flex; justify-content: space-between; font-size: 11px" class="muted"><span>Health ต่ำสุดรายวัน · 30 วัน</span><span class="mono">HI {{ c.hi }}</span></span>
+          <span style="display: flex; align-items: flex-end; gap: 2px; height: 30px">
+            <template v-for="(sb, $index) in (c.spark || [])">
+              <i :style="`flex: 1; height: ${sb.h}%; background: ${sb.c}; border-radius: 1px; min-height: 2px`"></i>
+            </template>
+          </span>
+        </span>
+      </button>
+    </template>
+  </div>
+  <template v-if="v.sel.ok">
+    <div class="panel" style="display: flex; flex-wrap: wrap; gap: 24px">
+      <div style="flex: 1 1 260px; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; background: #0B1117; border: 1px solid #1B2632; border-radius: 10px; padding: 18px; min-height: 220px">
+        <template v-if="v.sel.isMotor"><svg viewBox="0 0 160 110" width="240" height="165" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2; stroke-linejoin: round"><rect x="10" y="40" width="12" height="30" rx="3" fill="#202C3A"></rect><rect x="22" y="30" width="68" height="50" rx="8" fill="#1A2430"></rect><path d="M34 30v50M46 30v50M58 30v50M70 30v50" stroke="#2F4154"></path><rect x="46" y="17" width="24" height="13" rx="2" fill="#202C3A"></rect><rect x="90" y="36" width="34" height="38" rx="4" fill="#202C3A"></rect><rect x="124" y="50" width="24" height="10" rx="2" fill="#22D3EE" stroke="#22D3EE"></rect><path d="M28 80l-8 14h80l-8-14"></path></g></svg></template>
+        <template v-if="v.sel.isPump"><svg viewBox="0 0 160 110" width="240" height="165" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2; stroke-linejoin: round"><rect x="8" y="50" width="32" height="16" fill="#202C3A"></rect><circle cx="68" cy="58" r="30" fill="#1A2430"></circle><path d="M68 58m-16 0a16 16 0 1 0 16-16" stroke="#22D3EE"></path><rect x="60" y="14" width="16" height="16" fill="#202C3A"></rect><rect x="54" y="8" width="28" height="7" rx="2" fill="#202C3A"></rect><rect x="98" y="40" width="48" height="34" rx="6" fill="#1A2430"></rect><path d="M108 40v34M118 40v34M128 40v34" stroke="#2F4154"></path><rect x="20" y="92" width="130" height="8" rx="2" fill="#202C3A"></rect></g></svg></template>
+        <template v-if="v.sel.isValve"><svg viewBox="0 0 160 110" width="240" height="165" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2; stroke-linejoin: round"><rect x="10" y="62" width="40" height="18" fill="#202C3A"></rect><rect x="110" y="62" width="40" height="18" fill="#202C3A"></rect><rect x="44" y="56" width="8" height="30" rx="2" fill="#2A3A4C"></rect><rect x="108" y="56" width="8" height="30" rx="2" fill="#2A3A4C"></rect><ellipse cx="80" cy="71" rx="28" ry="20" fill="#1A2430"></ellipse><rect x="72" y="36" width="16" height="16" fill="#202C3A"></rect><path d="M80 22v14" stroke="#22D3EE"></path><path d="M50 22a30 16 0 0 1 60 0z" fill="#202C3A"></path></g></svg></template>
+        <template v-if="v.sel.isArm"><svg viewBox="0 0 160 110" width="240" height="165" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2; stroke-linejoin: round"><rect x="14" y="58" width="48" height="40" rx="6" fill="#1A2430"></rect><rect x="62" y="66" width="30" height="26" rx="4" fill="#202C3A"></rect><path d="M38 58L128 22" stroke="#2F4154" style="stroke-width: 9; stroke-linecap: round"></path><circle cx="38" cy="58" r="11" fill="#202C3A"></circle><circle cx="128" cy="22" r="6" fill="#202C3A" stroke="#22D3EE"></circle><path d="M128 22l14 10M128 22l4-15" stroke="#22D3EE"></path></g></svg></template>
+        <span class="lbl">ภาพตัวอย่างอะไหล่ · {{ v.sel.kindTh }}</span>
+        <span class="muted" style="font-size: 11.5px; text-align: center">ภาพประกอบเชิงเทคนิค · แทนที่ด้วยภาพถ่ายอะไหล่จริงของโรงงานได้</span>
+      </div>
+      <div style="flex: 2 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start">
+          <div style="display: flex; flex-direction: column">
+            <span class="mono muted" style="font-size: 12px">{{ v.sel.id }} · {{ v.sel.subsystem }} subsystem</span>
+            <span class="disp" style="font-size: 22px; font-weight: 600">{{ v.sel.name }}</span>
+            <span class="muted">{{ v.sel.th }}</span>
+          </div>
+          <span :class="`chip ${v.sel.stCls}`" style="font-size: 13px">{{ v.sel.stTh }} · {{ v.sel.health }}</span>
+        </div>
+        <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 10px">
+          <div style="display: flex; flex-direction: column"><span class="lbl">ตำแหน่ง</span><span style="font-size: 13px">{{ v.sel.zone }}</span></div>
+          <div style="display: flex; flex-direction: column"><span class="lbl">เวลาทำงานสะสม</span><span class="mono">{{ v.sel.runtime }}</span></div>
+          <div style="display: flex; flex-direction: column"><span class="lbl">RUL (คาดการณ์)</span><span class="mono">{{ v.sel.rul }}</span></div>
+          <div style="display: flex; flex-direction: column"><span class="lbl">รหัสอะไหล่</span><span class="muted" style="font-size: 13px">[ระบุ Part No.]</span></div>
+        </div>
+        <div class="scroll-x">
+          <div style="min-width: 420px">
+            <div class="trow thd" style="grid-template-columns: 1.6fr 1fr 1fr 1fr"><span>Channel</span><span>ค่าปัจจุบัน</span><span>ค่าปกติ</span><span>Δ%</span></div>
+            <template v-for="(ch, $index) in (v.sel.channels || [])">
+              <div class="trow" style="grid-template-columns: 1.6fr 1fr 1fr 1fr"><span class="mono" style="font-size: 12px">{{ ch.name }}</span><span class="mono">{{ ch.now }}</span><span class="mono muted">{{ ch.nom }}</span><span class="mono" :style="`color: ${ch.color}`">{{ ch.dev }}</span></div>
+            </template>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span class="lbl">แนวทางตรวจสอบ / ซ่อมบำรุงที่แนะนำ</span>
+          <template v-for="(a, $index) in (v.sel.actions || [])">
+            <span style="display: flex; gap: 8px; font-size: 13px"><span class="mono" style="color: #67E8F9">{{ a.n }}</span>{{ a.text }}</span>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+</section>
+</template>
+
+
+<template v-if="v.scr.forecast">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">คาดการณ์ความล้มเหลวของอุปกรณ์</h1>
+    <span class="lbl">Failure Forecast · Remaining Useful Life</span>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 18px">
+    <div class="panel" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 12px">
+      <span class="lbl">Part ที่คาดว่าจะเสียก่อน</span>
+      <span class="disp" style="font-size: 20px; font-weight: 600">{{ v.fc.name }}</span>
+      <span class="muted" style="margin-top: -8px">{{ v.fc.th }}</span>
+      <div :style="`display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 10px; background: #0B1117; border: 1px solid ${v.fc.color}`">
+        <span class="lbl">คาดว่าจะเสียหายในอีก</span>
+        <span class="countdown" :style="`color: ${v.fc.color}`">{{ v.fc.rul }}</span>
+        <span class="muted" style="font-size: 12.5px">เวลาที่คาดว่าจะเสีย ≈ <span class="mono" style="color: #F1F6FA">{{ v.fc.at }}</span></span>
+      </div>
+      <span :class="`chip ${v.fc.actCls}`" style="align-self: flex-start; font-size: 13px; padding: 5px 12px">{{ v.fc.actTh }}</span>
+      <span style="font-size: 13px">{{ v.fc.actText }}</span>
+      <div style="display: flex; justify-content: space-between; border-top: 1px solid #1B2632; padding-top: 10px; font-size: 12.5px"><span class="muted">ช่วงพักตามแผนถัดไป</span><span class="mono">{{ v.fc.nextBreak }} (อีก {{ v.fc.toBreak }})</span></div>
+      <div style="display: flex; justify-content: space-between; font-size: 12.5px"><span class="muted">โมเดลที่ใช้</span><span>LSTM-AE · AP {{ v.kpi.ap }}</span></div>
+    </div>
+    <div class="panel" style="flex: 2.4 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px">
+        <h2 class="h2">Health Index & การฉายแนวโน้ม · {{ v.hiChart.dev }}</h2>
+        <span class="muted" style="font-size: 12px">HI = e<sub>j</sub>(t) / ค่าปกติ (log scale) · เส้นประ = Projection</span>
+      </div>
+      <svg viewBox="0 0 760 260" width="100%" style="display: block" aria-label="กราฟ Health Index และการคาดการณ์">
+        <template v-for="(yt, $index) in (v.hiChart.yTicks || [])">
+          <line x1="44" x2="750" :y1="yt.y" :y2="yt.y" stroke="#1B2632"></line>
+          <text x="38" :y="yt.y" fill="#93A4B6" style="font-family: 'JetBrains Mono'; font-size: 10px; text-anchor: end; dominant-baseline: middle">{{ yt.label }}</text>
+        </template>
+        <template v-for="(sr, $index) in (v.hiChart.stops || [])">
+          <rect :x="sr.x" y="16" :width="sr.w" height="220" fill="#334155" opacity="0.35"></rect>
+        </template>
+        <line x1="44" x2="750" :y1="v.hiChart.thrY" :y2="v.hiChart.thrY" stroke="#FBBF24" style="stroke-width: 1.2; stroke-dasharray: 6 4"></line>
+        <text x="48" :y="v.hiChart.thrLblY" fill="#FCD34D" style="font-family: 'Chakra Petch'; font-size: 11px">Alarm threshold (HI = 1)</text>
+        <line x1="44" x2="750" :y1="v.hiChart.critY" :y2="v.hiChart.critY" stroke="#FF5A4E" style="stroke-width: 1.4"></line>
+        <text x="48" :y="v.hiChart.critLblY" fill="#FF8A80" style="font-family: 'Chakra Petch'; font-size: 11px">Failure level (HI = {{ v.hiChart.crit }})</text>
+        <path :d="v.hiChart.hist" fill="none" :stroke="v.accent" style="stroke-width: 1.8"></path>
+        <path :d="v.hiChart.proj" fill="none" stroke="#FF8A80" style="stroke-width: 2; stroke-dasharray: 5 5"></path>
+        <line :x1="v.hiChart.nowX" :x2="v.hiChart.nowX" y1="16" y2="236" stroke="#E6EDF3" opacity="0.5" style="stroke-dasharray: 2 3"></line>
+        <text :x="v.hiChart.nowX" y="12" fill="#E6EDF3" style="font-family: 'JetBrains Mono'; font-size: 10px; text-anchor: middle">NOW</text>
+        <template v-if="v.hiChart.hasFail">
+          <circle :cx="v.hiChart.failX" :cy="v.hiChart.critY" r="6" fill="none" stroke="#FF5A4E" style="stroke-width: 2"></circle>
+          <circle :cx="v.hiChart.failX" :cy="v.hiChart.critY" r="2.5" fill="#FF5A4E"></circle>
+        </template>
+        <template v-for="(xt, $index) in (v.hiChart.xTicks || [])">
+          <text :x="xt.x" y="254" fill="#93A4B6" style="font-family: 'JetBrains Mono'; font-size: 10px; text-anchor: middle">{{ xt.label }}</text>
+        </template>
+      </svg>
+      <span class="muted" style="font-size: 12px">RUL ประมาณจากการถดถอยแบบ log-linear ของ HI ช่วง 120 นาทีทำงานล่าสุด ไปยังระดับความเสียหาย · ระดับความเสียหายปรับเทียบจากเหตุการณ์จริง 16/07/2569 19:48 น. (1 เหตุการณ์)</span>
+    </div>
+  </div>
+  <div class="panel" style="display: flex; flex-direction: column; gap: 10px">
+    <h2 class="h2">การคาดการณ์รายอุปกรณ์</h2>
+    <div class="scroll-x">
+      <div style="min-width: 860px">
+        <div class="trow thd" style="grid-template-columns: 1.8fr 1fr .8fr .7fr .9fr 1.2fr 1.6fr"><span>Part</span><span>สถานะ</span><span>Health</span><span>HI</span><span>แนวโน้ม 60 นาที</span><span>คาดว่าจะเสียในอีก</span><span>คำแนะนำ</span></div>
+        <template v-for="(fr, $index) in (v.fcRows || [])">
+          <div :class="fr.rowCls" style="grid-template-columns: 1.8fr 1fr .8fr .7fr .9fr 1.2fr 1.6fr">
+            <span><button class="btn" @click="fr.go" style="min-height: 32px; padding: 0 10px; font-size: 12.5px"><span class="mono" style="color: #93A4B6">{{ fr.id }}</span>{{ fr.th }}</button></span>
+            <span><span :class="`chip ${fr.stCls}`">{{ fr.stTh }}</span></span>
+            <span class="mono" :style="`color: ${fr.color}`">{{ fr.health }}</span>
+            <span class="mono">{{ fr.hi }}</span>
+            <span class="mono" :style="`color: ${fr.trendColor}`">{{ fr.trend }}</span>
+            <span class="mono">{{ fr.rul }}</span>
+            <span style="font-size: 12.5px">{{ fr.rec }}</span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="display: flex; flex-direction: column; gap: 10px">
+    <h2 class="h2">ความแม่นยำของการคาดการณ์ RUL (เหตุการณ์ 16/07/2569)</h2>
+    <div class="scroll-x">
+      <div style="min-width: 560px">
+        <div class="trow thd" style="grid-template-columns: repeat(5, minmax(0, 1fr))"><span>ก่อนเสีย</span><span>เวลา</span><span>RUL ที่ทำนาย</span><span>เวลาจริงที่เหลือ</span><span>ความคลาดเคลื่อน</span></div>
+        <template v-for="(re, $index) in (v.rulEval || [])">
+          <div class="trow" style="grid-template-columns: repeat(5, minmax(0, 1fr))"><span class="mono">{{ re.h }}</span><span class="mono">{{ re.t }}</span><span class="mono">{{ re.pred }}</span><span class="mono">{{ re.truth }}</span><span class="mono" :style="`color: ${re.color}`">{{ re.err }}</span></div>
+        </template>
+      </div>
+    </div>
+    <span class="muted" style="font-size: 12px">หมายเหตุ: ระดับความเสียหายถูกปรับเทียบจากเหตุการณ์เดียวกันนี้ (in-sample) — ต้องยืนยันกับเหตุการณ์ความเสียหายเพิ่มเติมจากบันทึกซ่อมบำรุง</span>
+  </div>
+</section>
+</template>
+
+
+<template v-if="v.scr.layout">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">ตำแหน่งอุปกรณ์ในเครื่องจักร</h1>
+    <span class="lbl">Digital Twin Layout · Physical Topology</span>
+  </div>
+  <div class="panel" style="padding: 14px">
+    <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; font-size: 12px">
+      <span style="display: flex; align-items: center; gap: 6px"><span class="dot" style="background: #34D399"></span>ปกติ</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span class="dot" style="background: #FBBF24"></span>เฝ้าระวัง</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span class="dot" style="background: #FF5A4E"></span>วิกฤต</span>
+      <span class="muted" style="margin-left: auto">คลิกจุดบนเครื่องเพื่อดูรายละเอียด Part</span>
+    </div>
+    <div class="scroll-x">
+    <div :class="v.twinCls" style="min-width: 720px">
+      <svg viewBox="0 0 1000 400" width="100%" style="display: block" aria-label="ผังเครื่องล้างหม้อหุงและฝา">
+        <line x1="0" y1="392" x2="1000" y2="392" stroke="#223040" style="stroke-width: 2"></line>
+        <text x="20" y="24" fill="#93A4B6" style="font-family: 'Chakra Petch'; font-size: 12px; letter-spacing: 2px">SIDE VIEW · POT &amp; LID WASHER</text>
+        
+        <path d="M300 48H760" fill="none" stroke="#2F3D4E" style="stroke-width: 8; stroke-linecap: round"></path>
+        <path class="steam" d="M300 48H760" fill="none" stroke="#FB923C" style="stroke-width: 2; stroke-dasharray: 3 9"></path>
+        <text x="770" y="52" fill="#FDBA74" style="font-family: 'Chakra Petch'; font-size: 11px">STEAM</text>
+        <path d="M340 48V110M460 48V110M580 48V110M700 48V110" fill="none" stroke="#2F3D4E" style="stroke-width: 5"></path>
+        <path d="M328 60L352 76V60L328 76Z" fill="#1A2430" :stroke="v.col.SV1" style="stroke-width: 2"></path>
+        <path d="M448 60L472 76V60L448 76Z" fill="#1A2430" :stroke="v.col.SV2" style="stroke-width: 2"></path>
+        <path d="M568 60L592 76V60L568 76Z" fill="#1A2430" :stroke="v.col.SV3" style="stroke-width: 2"></path>
+        <path d="M688 60L712 76V60L688 76Z" fill="#1A2430" :stroke="v.col.SV4" style="stroke-width: 2"></path>
+        
+        <rect x="285" y="110" width="470" height="190" rx="12" fill="#0D141B" stroke="#2A3A4C" style="stroke-width: 2"></rect>
+        <path d="M400 116V294M520 116V294M640 116V294" stroke="#223040" style="stroke-dasharray: 4 6"></path>
+        <text x="342" y="134" fill="#93A4B6" style="font-family: 'Chakra Petch'; font-size: 11px; text-anchor: middle">ZONE 1</text>
+        <text x="460" y="134" fill="#93A4B6" style="font-family: 'Chakra Petch'; font-size: 11px; text-anchor: middle">ZONE 2</text>
+        <text x="580" y="134" fill="#93A4B6" style="font-family: 'Chakra Petch'; font-size: 11px; text-anchor: middle">ZONE 3</text>
+        <text x="698" y="134" fill="#93A4B6" style="font-family: 'Chakra Petch'; font-size: 11px; text-anchor: middle">ZONE 4</text>
+        <g class="spray" fill="#38BDF8">
+          <path d="M330 150l10 40 10-40z" opacity="0.5"></path><path d="M450 150l10 40 10-40z" opacity="0.5"></path><path d="M570 150l10 40 10-40z" opacity="0.5"></path><path d="M690 150l10 40 10-40z" opacity="0.5"></path>
+          <path d="M330 280l10-40 10 40z" opacity="0.5"></path><path d="M450 280l10-40 10 40z" opacity="0.5"></path><path d="M570 280l10-40 10 40z" opacity="0.5"></path><path d="M690 280l10-40 10 40z" opacity="0.5"></path>
+        </g>
+        <path d="M290 222H750" stroke="#3B4A5C" style="stroke-width: 3"></path>
+        <g class="pot"><rect x="270" y="200" width="34" height="20" rx="4" fill="#64748B" stroke="#CBD5E1"></rect></g>
+        <g class="pot2"><rect x="270" y="200" width="34" height="20" rx="4" fill="#64748B" stroke="#CBD5E1"></rect></g>
+        
+        <path d="M300 318H760" fill="none" stroke="#2F3D4E" style="stroke-width: 7; stroke-linecap: round"></path>
+        <path class="steam" d="M300 318H760" fill="none" stroke="#38BDF8" style="stroke-width: 2; stroke-dasharray: 3 9"></path>
+        <path d="M340 300V338M460 300V338M580 300V338M700 300V338" stroke="#2F3D4E" style="stroke-width: 5"></path>
+        <circle cx="340" cy="356" r="18" fill="#1A2430" :stroke="v.col.P1" style="stroke-width: 2.5"></circle>
+        <circle cx="460" cy="356" r="18" fill="#1A2430" :stroke="v.col.P2" style="stroke-width: 2.5"></circle>
+        <circle cx="580" cy="356" r="18" fill="#1A2430" :stroke="v.col.P3" style="stroke-width: 2.5"></circle>
+        <circle cx="700" cy="356" r="18" fill="#1A2430" :stroke="v.col.P4" style="stroke-width: 2.5"></circle>
+        <text x="770" y="322" fill="#7DD3FC" style="font-family: 'Chakra Petch'; font-size: 11px">WATER</text>
+        
+        <rect x="20" y="276" width="200" height="18" rx="9" fill="#121A23" :stroke="v.col.CV1" style="stroke-width: 2"></rect>
+        <path class="belt" d="M30 276H210" fill="none" stroke="#5B6B7D" style="stroke-width: 2; stroke-dasharray: 8 4"></path>
+        <circle cx="30" cy="285" r="6" fill="#202C3A" stroke="#5B6B7D"></circle><circle cx="210" cy="285" r="6" fill="#202C3A" stroke="#5B6B7D"></circle>
+        <path d="M40 294V392M200 294V392" stroke="#223040" style="stroke-width: 4"></path>
+        <rect x="820" y="276" width="165" height="18" rx="9" fill="#121A23" :stroke="v.col.CV2" style="stroke-width: 2"></rect>
+        <path class="belt" d="M830 276H975" fill="none" stroke="#5B6B7D" style="stroke-width: 2; stroke-dasharray: 8 4"></path>
+        <circle cx="830" cy="285" r="6" fill="#202C3A" stroke="#5B6B7D"></circle><circle cx="975" cy="285" r="6" fill="#202C3A" stroke="#5B6B7D"></circle>
+        <path d="M840 294V392M965 294V392" stroke="#223040" style="stroke-width: 4"></path>
+        <rect x="60" y="256" width="34" height="20" rx="4" fill="#64748B" stroke="#CBD5E1"></rect>
+        <rect x="880" y="256" width="34" height="20" rx="4" fill="#94A3B8" stroke="#E2E8F0"></rect>
+        <text x="20" y="250" fill="#93A4B6" style="font-family: 'Chakra Petch'; font-size: 11px">IN · หม้อสกปรก</text>
+        <text x="985" y="250" fill="#93A4B6" style="font-family: 'Chakra Petch'; font-size: 11px; text-anchor: end">OUT · หม้อสะอาด</text>
+        
+        <rect x="212" y="200" width="46" height="40" rx="6" fill="#1A2430" :stroke="v.col.RAI" style="stroke-width: 2"></rect>
+        <g class="swing"><rect x="231" y="150" width="8" height="52" rx="4" fill="#2F4154" :stroke="v.col.RAI"></rect></g>
+        <circle cx="235" cy="200" r="9" fill="#202C3A" :stroke="v.col.RAI" style="stroke-width: 2"></circle>
+        <rect x="777" y="200" width="46" height="40" rx="6" fill="#1A2430" :stroke="v.col.RAO" style="stroke-width: 2"></rect>
+        <g class="swing"><rect x="796" y="150" width="8" height="52" rx="4" fill="#2F4154" :stroke="v.col.RAO"></rect></g>
+        <circle cx="800" cy="200" r="9" fill="#202C3A" :stroke="v.col.RAO" style="stroke-width: 2"></circle>
+        <path d="M120 300l0 0" stroke="none"></path>
+      </svg>
+      <div class="ov">
+        <template v-for="(h, $index) in (v.hotspots || [])">
+          <button :class="h.cls" :style="`left: ${h.x}%; top: ${h.y}%`" @click="h.go" :aria-label="h.aria"><span class="dot" :style="`background: ${h.color}`"></span>{{ h.id }}</button>
+        </template>
+      </div>
+    </div>
+    </div>
+  </div>
+  <template v-if="v.sel.ok">
+    <div style="display: flex; flex-wrap: wrap; gap: 18px">
+      <div class="panel" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 10px">
+        <span class="mono muted" style="font-size: 12px">{{ v.sel.id }} · {{ v.sel.subsystem }}</span>
+        <span class="disp" style="font-size: 22px; font-weight: 600">{{ v.sel.name }}</span>
+        <span class="muted" style="margin-top: -8px">{{ v.sel.th }}</span>
+        <span :class="`chip ${v.sel.stCls}`" style="align-self: flex-start">{{ v.sel.stTh }} · Health {{ v.sel.health }}</span>
+        <div style="display: flex; flex-direction: column"><span class="lbl">ตำแหน่งติดตั้ง</span><span>{{ v.sel.zone }}</span></div>
+        <div style="display: flex; flex-direction: column"><span class="lbl">Sensor Channels</span><span class="mono" style="font-size: 12.5px">{{ v.sel.chList }}</span></div>
+        <div style="display: flex; gap: 18px; flex-wrap: wrap">
+          <div style="display: flex; flex-direction: column"><span class="lbl">Runtime</span><span class="mono">{{ v.sel.runtime }}</span></div>
+          <div style="display: flex; flex-direction: column"><span class="lbl">RUL</span><span class="mono">{{ v.sel.rul }}</span></div>
+          <div style="display: flex; flex-direction: column"><span class="lbl">HI</span><span class="mono">{{ v.sel.hi }}</span></div>
+        </div>
+      </div>
+      <div class="panel" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center">
+        <template v-if="v.sel.isMotor"><svg viewBox="0 0 160 110" width="220" height="150" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2; stroke-linejoin: round"><rect x="10" y="40" width="12" height="30" rx="3" fill="#202C3A"></rect><rect x="22" y="30" width="68" height="50" rx="8" fill="#1A2430"></rect><path d="M34 30v50M46 30v50M58 30v50M70 30v50" stroke="#2F4154"></path><rect x="46" y="17" width="24" height="13" rx="2" fill="#202C3A"></rect><rect x="90" y="36" width="34" height="38" rx="4" fill="#202C3A"></rect><rect x="124" y="50" width="24" height="10" rx="2" fill="#22D3EE" stroke="#22D3EE"></rect><path d="M28 80l-8 14h80l-8-14"></path></g></svg></template>
+        <template v-if="v.sel.isPump"><svg viewBox="0 0 160 110" width="220" height="150" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2; stroke-linejoin: round"><rect x="8" y="50" width="32" height="16" fill="#202C3A"></rect><circle cx="68" cy="58" r="30" fill="#1A2430"></circle><path d="M68 58m-16 0a16 16 0 1 0 16-16" stroke="#22D3EE"></path><rect x="60" y="14" width="16" height="16" fill="#202C3A"></rect><rect x="54" y="8" width="28" height="7" rx="2" fill="#202C3A"></rect><rect x="98" y="40" width="48" height="34" rx="6" fill="#1A2430"></rect><path d="M108 40v34M118 40v34M128 40v34" stroke="#2F4154"></path><rect x="20" y="92" width="130" height="8" rx="2" fill="#202C3A"></rect></g></svg></template>
+        <template v-if="v.sel.isValve"><svg viewBox="0 0 160 110" width="220" height="150" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2; stroke-linejoin: round"><rect x="10" y="62" width="40" height="18" fill="#202C3A"></rect><rect x="110" y="62" width="40" height="18" fill="#202C3A"></rect><rect x="44" y="56" width="8" height="30" rx="2" fill="#2A3A4C"></rect><rect x="108" y="56" width="8" height="30" rx="2" fill="#2A3A4C"></rect><ellipse cx="80" cy="71" rx="28" ry="20" fill="#1A2430"></ellipse><rect x="72" y="36" width="16" height="16" fill="#202C3A"></rect><path d="M80 22v14" stroke="#22D3EE"></path><path d="M50 22a30 16 0 0 1 60 0z" fill="#202C3A"></path></g></svg></template>
+        <template v-if="v.sel.isArm"><svg viewBox="0 0 160 110" width="220" height="150" aria-hidden="true"><g fill="none" stroke="#9FB3C8" style="stroke-width: 2; stroke-linejoin: round"><rect x="14" y="58" width="48" height="40" rx="6" fill="#1A2430"></rect><rect x="62" y="66" width="30" height="26" rx="4" fill="#202C3A"></rect><path d="M38 58L128 22" stroke="#2F4154" style="stroke-width: 9; stroke-linecap: round"></path><circle cx="38" cy="58" r="11" fill="#202C3A"></circle><circle cx="128" cy="22" r="6" fill="#202C3A" stroke="#22D3EE"></circle><path d="M128 22l14 10M128 22l4-15" stroke="#22D3EE"></path></g></svg></template>
+        <span class="lbl">ภาพตัวอย่างอะไหล่ · {{ v.sel.kindTh }}</span>
+      </div>
+      <div class="panel" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 8px">
+        <span class="lbl">แนวทางตรวจสอบที่แนะนำ</span>
+        <template v-for="(a, $index) in (v.sel.actions || [])">
+          <span style="display: flex; gap: 8px; font-size: 13px"><span class="mono" style="color: #67E8F9">{{ a.n }}</span>{{ a.text }}</span>
+        </template>
+      </div>
+    </div>
+  </template>
+</section>
+</template>
+
+
+<template v-if="v.scr.alerts">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">แจ้งเตือน & วิเคราะห์ความเสียหายอัตโนมัติ</h1>
+    <span class="lbl">Alerts · Automatic Fault Diagnosis</span>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+    <div class="panel" style="flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="h2">รายการแจ้งเตือน</h2><span class="muted" style="font-size: 12px">{{ v.alertCount }} รายการ</span></div>
+      <div style="display: flex; flex-direction: column; gap: 8px; max-height: 640px; overflow-y: auto; padding-right: 4px">
+        <template v-for="(al, $index) in (v.alertsList || [])">
+          <button :class="al.cls" @click="al.pick" style="align-items: flex-start">
+            <span class="dot" :style="`background: ${al.color}; margin-top: 7px`"></span>
+            <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+              <span style="display: flex; justify-content: space-between; gap: 8px"><span style="font-weight: 600">{{ al.title }}</span><span :class="`chip ${al.sevCls}`" style="padding: 0 8px; font-size: 11px">{{ al.sevTh }}</span></span>
+              <span class="muted" style="font-size: 12px">{{ al.sub }}</span>
+              <span class="mono muted" style="font-size: 11.5px">{{ al.when }}</span>
+            </span>
+          </button>
+        </template>
+      </div>
+    </div>
+    <div style="flex: 2 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+      <div class="panel" style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline">
+          <h2 class="h2">ผลวิเคราะห์อัตโนมัติ</h2>
+          <span :class="`chip ${v.diag.typeCls}`">{{ v.diag.type }}</span>
+        </div>
+        <div style="display: flex; flex-direction: column">
+          <span class="lbl">{{ v.diag.context }}</span>
+          <span class="disp" style="font-size: 20px; font-weight: 600">{{ v.diag.dev }}</span>
+          <span class="muted">{{ v.diag.devTh }}</span>
+        </div>
+        <ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px">
+          <template v-for="(dl, $index) in (v.diag.lines || [])"><li style="font-size: 13.5px">{{ dl.text }}</li></template>
+        </ol>
+      </div>
+      <div class="panel" style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline">
+          <h2 class="h2">Per-channel Attribution · จัดอันดับต้นเหตุ</h2>
+          <span class="muted" style="font-size: 12px">Eq. 3 · ณ เวลา {{ v.clockTime }}</span>
+        </div>
+        <template v-for="(cb, $index) in (v.contrib || [])">
+          <div style="display: grid; grid-template-columns: 28px minmax(0, 190px) minmax(0, 1fr) 64px; gap: 10px; align-items: center">
+            <span class="mono muted" style="font-size: 12px">#{{ cb.rank }}</span>
+            <span style="font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ cb.name }}</span>
+            <span class="bar" style="height: 10px"><i :style="`width: ${cb.w}%; background: ${cb.color}`"></i></span>
+            <span class="mono" :style="`font-size: 12px; text-align: right; color: ${cb.color}`">{{ cb.hi }}</span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</section>
+</template>
+
+
+<template v-if="v.scr.timeline">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">Timeline การทำงานของเครื่องจักร</h1>
+    <span class="lbl">Machine Timeline · Operating Modes</span>
+  </div>
+  <div class="panel" style="display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px">
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; background: rgba(45,212,191,.55)"></span>RUN</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; background: rgba(96,165,250,.7)"></span>RAMP-UP</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span class="seg-planned_stop" style="width: 14px; height: 10px"></span>พักตามแผน</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; background: #F59E0B"></span>หยุดนอกแผน</span>
+      <span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; background: #FF5A4E"></span>FAULT</span>
+    </div>
+    <div class="scroll-x">
+      <div style="min-width: 680px; display: flex; flex-direction: column; gap: 6px">
+        <div style="display: grid; grid-template-columns: 110px 1fr; gap: 10px">
+          <span></span>
+          <div style="position: relative; height: 16px" class="mono muted">
+            <template v-for="(ht, $index) in (v.hourTicks || [])"><span :style="`position: absolute; left: ${ht.x}%; font-size: 10px; transform: translateX(-50%)`">{{ ht.label }}</span></template>
+          </div>
+        </div>
+        <template v-for="(g, $index) in (v.gantt || [])">
+          <div style="display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center">
+            <span class="mono" :style="`font-size: 12px; color: ${g.lblColor}`">{{ g.label }}</span>
+            <div style="position: relative; height: 22px; background: #0B1117; border: 1px solid #1B2632; border-radius: 4px; overflow: hidden">
+              <template v-for="(sg, $index) in (g.segs || [])"><span :class="sg.cls" :style="`left: ${sg.l}%; width: ${sg.w}%`" :title="sg.title"></span></template>
+              <template v-if="g.isToday"><span :style="`position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; left: ${g.nowX}%`"></span></template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: baseline">
+      <h2 class="h2">วันที่ Replay · Anomaly score ตลอดวัน</h2>
+      <span class="muted" style="font-size: 12px">แถบแดง = ช่วงแจ้งเตือน · แถบเทา = เครื่องหยุด</span>
+    </div>
+    <svg viewBox="0 0 1000 150" width="100%" style="display: block" aria-label="Anomaly score ทั้งวัน">
+      <template v-for="(sr, $index) in (v.dayChart.stops || [])"><rect :x="sr.x" y="10" :width="sr.w" height="118" fill="#334155" opacity="0.45"></rect></template>
+      <template v-for="(ar, $index) in (v.dayChart.alarms || [])"><rect :x="ar.x" y="10" :width="ar.w" height="118" fill="#FF5A4E" opacity="0.14"></rect></template>
+      <line x1="30" x2="995" :y1="v.dayChart.thrY" :y2="v.dayChart.thrY" stroke="#FBBF24" style="stroke-dasharray: 6 4"></line>
+      <path :d="v.dayChart.path" fill="none" :stroke="v.accent" style="stroke-width: 1.4"></path>
+      <line :x1="v.dayChart.nowX" :x2="v.dayChart.nowX" y1="6" y2="130" stroke="#fff" style="stroke-width: 1.5"></line>
+      <template v-for="(xt, $index) in (v.dayChart.xTicks || [])"><text :x="xt.x" y="146" fill="#93A4B6" style="font-family: 'JetBrains Mono'; font-size: 10px; text-anchor: middle">{{ xt.label }}</text></template>
+    </svg>
+  </div>
+  <div class="panel" style="display: flex; flex-direction: column; gap: 10px">
+    <h2 class="h2">เหตุการณ์สำคัญ</h2>
+    <template v-for="(ke, $index) in (v.keyEvents || [])">
+      <div style="display: grid; grid-template-columns: 56px 14px 1fr; gap: 10px; align-items: start">
+        <span class="mono" style="font-size: 13px; color: #CFE3F1">{{ ke.time }}</span>
+        <span class="dot" :style="`background: ${ke.color}; margin-top: 7px`"></span>
+        <span style="font-size: 13px">{{ ke.text }}</span>
+      </div>
+    </template>
+  </div>
+</section>
+</template>
+
+
+<template v-if="v.scr.runtime">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">ระบบเก็บเวลาการทำงานของอุปกรณ์</h1>
+    <span class="lbl">Runtime Hours Counter</span>
+  </div>
+  <div class="grid-auto">
+    <div class="panel" style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">ชั่วโมงทำงานเครื่องจักร (สะสม)</span><span class="kpi mono">{{ v.rt.machineH }}</span><span class="muted" style="font-size: 12px">ตั้งแต่ {{ v.rt.since }}</span></div>
+    <div class="panel" style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">วันนี้</span><span class="kpi mono">{{ v.rt.todayH }}</span><span class="muted" style="font-size: 12px">นับถึง {{ v.clockTime }}</span></div>
+    <div class="panel" style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">อัตราการใช้งานเฉลี่ย</span><span class="kpi mono">{{ v.rt.util }}</span><span class="muted" style="font-size: 12px">ชั่วโมงทำงาน / 24 ชม. ต่อวัน</span></div>
+    <div class="panel" style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">จำนวนวันที่บันทึก</span><span class="kpi mono">{{ v.rt.days }}</span><span class="muted" style="font-size: 12px">Sampling 1 นาที</span></div>
+  </div>
+  <div class="panel" style="display: flex; flex-direction: column; gap: 10px">
+    <h2 class="h2">เวลาทำงานสะสมราย Part</h2>
+    <div class="scroll-x">
+      <div style="min-width: 760px">
+        <div class="trow thd" style="grid-template-columns: 1.7fr 1fr 1.6fr .9fr .9fr 1fr"><span>Part</span><span>Runtime สะสม</span><span></span><span>จำนวนครั้งสตาร์ท</span><span>เฉลี่ย / วัน</span><span>สถานะ</span></div>
+        <template v-for="(rr, $index) in (v.rtRows || [])">
+          <div class="trow" style="grid-template-columns: 1.7fr 1fr 1.6fr .9fr .9fr 1fr">
+            <span><span class="mono muted" style="font-size: 12px">{{ rr.id }}</span> {{ rr.th }}</span>
+            <span class="mono" style="font-weight: 600">{{ rr.hours }}</span>
+            <span class="bar"><i :style="`width: ${rr.w}%; background: #22D3EE`"></i></span>
+            <span class="mono">{{ rr.starts }}</span>
+            <span class="mono">{{ rr.perDay }}</span>
+            <span><span :class="`chip ${rr.stCls}`">{{ rr.state }}</span></span>
+          </div>
+        </template>
+      </div>
+    </div>
+    <span class="muted" style="font-size: 12px">นับเวลาเมื่อ Load ของ Part &gt; 0 · รอบซ่อมบำรุงตามชั่วโมง (PM interval) ของแต่ละ Part: [ระบุจากคู่มือผู้ผลิต]</span>
+  </div>
+</section>
+</template>
+
+
+<template v-if="v.scr.model">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">ประสิทธิภาพโมเดลทำนาย</h1>
+    <span class="lbl">LSTM-Autoencoder · Mode-aware · Test set</span>
+  </div>
+  <div class="grid-auto" style="grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr))">
+    <template v-for="(m, $index) in (v.mk || [])">
+      <div class="panel" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 10px">
+        <div style="position: relative; width: 96px; height: 96px">
+          <svg viewBox="0 0 100 100" width="96" height="96" aria-hidden="true" style="display: block">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#1A2430" style="stroke-width: 8"></circle>
+            <circle cx="50" cy="50" r="40" fill="none" :stroke="m.color" transform="rotate(-90 50 50)" :style="`stroke-width: 8; stroke-linecap: round; stroke-dasharray: ${m.dash}`"></circle>
+          </svg>
+          <span class="disp" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 600; color: #F8FBFD">{{ m.val }}</span>
+        </div>
+        <span style="font-weight: 600; text-align: center">{{ m.label }}</span>
+        <span class="muted" style="font-size: 11.5px; text-align: center">{{ m.sub }}</span>
+      </div>
+    </template>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 18px">
+    <div class="panel" style="flex: 3 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+      <h2 class="h2">เปรียบเทียบกับ Baseline (Table VI)</h2>
+      <div class="scroll-x">
+        <div style="min-width: 640px">
+          <div class="trow thd" style="grid-template-columns: 1.8fr .7fr .8fr .8fr .9fr 1fr"><span>Condition</span><span>AP</span><span>Event F0.5</span><span>FA / week</span><span>Lead time</span><span>First alarm</span></div>
+          <template v-for="(mr, $index) in (v.modelRows || [])">
+            <div :class="mr.cls" style="grid-template-columns: 1.8fr .7fr .8fr .8fr .9fr 1fr"><span style="font-weight: 600">{{ mr.name }}</span><span class="mono">{{ mr.ap }}</span><span class="mono">{{ mr.f05 }}</span><span class="mono">{{ mr.fa }}</span><span class="mono">{{ mr.lead }}</span><span class="mono" style="font-size: 12px">{{ mr.first }}</span></div>
+          </template>
+        </div>
+      </div>
+      <span class="muted" style="font-size: 12px">ไม่ใช้ Point adjustment · Threshold = เปอร์เซ็นไทล์ {{ v.model.pct }} ของ error ช่วง Train แยกตามโหมด เลือกบน Validation · Persistence k = {{ v.model.k }} นาที · Positive window = {{ v.model.horizon }} ชม. ก่อนความเสียหาย</span>
+    </div>
+    <div class="panel" style="flex: 2 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+      <h2 class="h2">Training Loss (MSE)</h2>
+      <svg viewBox="0 0 520 200" width="100%" style="display: block" aria-label="กราฟ loss">
+        <template v-for="(yt, $index) in (v.lossChart.yTicks || [])">
+          <line x1="44" x2="510" :y1="yt.y" :y2="yt.y" stroke="#1B2632"></line>
+          <text x="38" :y="yt.y" fill="#93A4B6" style="font-family: 'JetBrains Mono'; font-size: 10px; text-anchor: end; dominant-baseline: middle">{{ yt.label }}</text>
+        </template>
+        <path :d="v.lossChart.train" fill="none" :stroke="v.accent" style="stroke-width: 2"></path>
+        <path :d="v.lossChart.val" fill="none" stroke="#FB923C" style="stroke-width: 2; stroke-dasharray: 5 4"></path>
+        <text x="510" y="194" fill="#93A4B6" style="font-family: 'JetBrains Mono'; font-size: 10px; text-anchor: end">epoch {{ v.model.epochs }}</text>
+      </svg>
+      <div style="display: flex; gap: 16px; font-size: 12px"><span style="display: flex; gap: 6px; align-items: center"><span style="width: 16px; height: 2px; background: #22D3EE"></span>Train</span><span style="display: flex; gap: 6px; align-items: center"><span style="width: 16px; height: 2px; background: #FB923C"></span>Validation</span></div>
+    </div>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 18px">
+    <div class="panel" style="flex: 1 1 340px; display: flex; flex-direction: column; gap: 8px">
+      <h2 class="h2">Model Configuration (Table IV)</h2>
+      <template v-for="(cf, $index) in (v.cfg || [])">
+        <div style="display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid #18222D; padding: 5px 0; font-size: 13px"><span class="muted">{{ cf.k }}</span><span class="mono" style="text-align: right">{{ cf.v }}</span></div>
+      </template>
+    </div>
+    <div class="panel" style="flex: 1 1 340px; display: flex; flex-direction: column; gap: 12px">
+      <h2 class="h2">การแบ่งข้อมูล (Temporal split)</h2>
+      <div style="display: flex; height: 34px; border-radius: 6px; overflow: hidden; font-size: 12px; font-weight: 600">
+        <span style="flex: 60; background: #0E7490; display: flex; align-items: center; justify-content: center">Train 60%</span>
+        <span style="flex: 20; background: #7C5E10; display: flex; align-items: center; justify-content: center">Val 20%</span>
+        <span style="flex: 20; background: #7F1D1D; display: flex; align-items: center; justify-content: center">Test 20%</span>
+      </div>
+      <template v-for="(sp, $index) in (v.splits || [])">
+        <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; flex-wrap: wrap"><span style="font-weight: 600">{{ sp.name }}</span><span class="mono muted">{{ sp.range }}</span><span class="mono">{{ sp.rows }}</span></div>
+      </template>
+      <span class="muted" style="font-size: 12px">Train ใช้เฉพาะข้อมูลสภาวะปกติ (label N) · Validation ใช้เลือก Threshold และ Early stopping · Test มีเหตุการณ์ความเสียหายจริง 1 ครั้ง</span>
+      <h2 class="h2" style="margin-top: 6px">Fault Localization (Table VII)</h2>
+      <template v-for="(lr, $index) in (v.locRows || [])">
+        <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 13px"><span class="muted">{{ lr.k }}</span><span class="mono">{{ lr.v }}</span></div>
+      </template>
+      <template v-if="v.stab.show">
+        <h2 class="h2" style="margin-top: 6px">Stability ({{ v.stab.n }} seeds)</h2>
+        <template v-for="(sr, $index) in (v.stab.rows || [])">
+          <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 13px"><span class="muted">{{ sr.k }}</span><span class="mono">{{ sr.v }}</span></div>
+        </template>
+      </template>
+    </div>
+  </div>
+  <div class="panel" style="display: flex; flex-direction: column; gap: 10px">
+    <h2 class="h2">การเชื่อมต่อข้อมูล Real-time (พร้อมต่อในอนาคต)</h2>
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px">
+      <span class="chip st-off">Sensors · Modbus RTU</span><span class="muted">→</span>
+      <span class="chip st-off">Node-RED</span><span class="muted">→</span>
+      <span class="chip st-off">SQL Server 2022 · SensorDP</span><span class="muted">→</span>
+      <span class="chip st-info">PM·TWIN API (FastAPI)</span><span class="muted">→</span>
+      <span class="chip st-info">Web App</span>
+    </div>
+    <div class="scroll-x">
+      <table class="tbl">
+        <thead><tr><th>Endpoint</th><th>หน้าที่</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">POST /api/v1/ingest</td><td>รับค่า Sensor ต่อนาทีจาก Node-RED (1 แถว หรือ batch)</td></tr>
+          <tr><td class="mono">GET /api/v1/state</td><td>สถานะ Digital Twin ล่าสุด: Health, HI, RUL, Action ของทุก Part</td></tr>
+          <tr><td class="mono">WS /ws/stream</td><td>Push สถานะใหม่ทุกนาทีให้หน้าเว็บ (Real-time)</td></tr>
+          <tr><td class="mono">GET /api/v1/alerts</td><td>รายการแจ้งเตือนและผลวิเคราะห์อัตโนมัติ</td></tr>
+          <tr><td class="mono">POST /api/v1/retrain</td><td>Train โมเดลใหม่เมื่อมีข้อมูลเพิ่ม (60/20/20)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+</template>
+
+
+<template v-if="v.scr.report">
+<section class="screen" style="display: flex; flex-direction: column; gap: 18px">
+  <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
+    <h1 class="disp" style="margin: 0; font-size: 26px; font-weight: 600">รายงานความเคลื่อนไหวทั้งหมด</h1>
+    <span class="lbl">Activity Report · Event Log</span>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+    <div class="panel" style="flex: 3 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap">
+        <h2 class="h2">บันทึกเหตุการณ์ · {{ v.clockDate }}</h2>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap">
+          <template v-for="(f, $index) in (v.filters || [])"><button :class="f.cls" @click="f.set" style="min-height: 32px; padding: 0 10px; font-size: 12px">{{ f.label }}</button></template>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; max-height: 680px; overflow-y: auto">
+        <template v-for="(ac, $index) in (v.acts || [])">
+          <div style="display: grid; grid-template-columns: 52px 110px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid #18222D; align-items: start">
+            <span class="mono" style="font-size: 12.5px; color: #CFE3F1">{{ ac.time }}</span>
+            <span :class="`chip ${ac.cls}`" style="justify-content: center; font-size: 11px">{{ ac.type }}</span>
+            <span style="font-size: 13px">{{ ac.text }}</span>
+          </div>
+        </template>
+        <template v-if="v.noActs"><span class="muted" style="padding: 12px 0">ยังไม่มีเหตุการณ์ในช่วงเวลานี้</span></template>
+      </div>
+    </div>
+    <div class="panel" style="flex: 2 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+      <h2 class="h2">สรุปรายวัน · 14 วันก่อนหน้า</h2>
+      <div class="scroll-x">
+        <div style="min-width: 400px">
+          <div class="trow thd" style="grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr))"><span>วันที่</span><span>Run (ชม.)</span><span>หยุด (ชม.)</span><span>Alarm (นาที)</span><span>Max score</span></div>
+          <template v-for="(dd, $index) in (v.daily14 || [])">
+            <div class="trow" style="grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr))"><span class="mono" style="font-size: 12px">{{ dd.d }}</span><span class="mono">{{ dd.run }}</span><span class="mono">{{ dd.stop }}</span><span class="mono" :style="`color: ${dd.alarmColor}`">{{ dd.alarm }}</span><span class="mono">{{ dd.max }}</span></div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</template>
+
+<footer class="muted" style="font-size: 11.5px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-top: 1px solid #1B2632; padding-top: 12px">
+  <span>Framework: Phongsakonvic · Digital Twin + AI for Predictive Maintenance</span>
+  <span class="mono">Data: {{ v.dataInfo }}</span>
+</footer>
+</main>
+</div>
+</template>
+</div>
+
+</script>
+<script src="./vendor/vue.global.prod.js"></script>
+<script>
+class DCLogic {
+  constructor(props) { this.props = props || {}; this.state = {}; }
+  setState(o) {
+    Object.assign(this.state, typeof o === 'function' ? o(this.state) : o);
+    if (this.__onUpdate) this.__onUpdate();
+  }
+  forceUpdate() { if (this.__onUpdate) this.__onUpdate(); }
+}
+
+const DATA_URL = './data/pm_twin_data.json';
+const BKK_FMT = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+function bkkNow() {
+  const o = {}; BKK_FMT.formatToParts(new Date()).forEach((p) => { o[p.type] = p.value; });
+  return { y: +o.year, mo: +o.month, d: +o.day, h: +o.hour % 24, mi: +o.minute, s: +o.second };
+}
+const TABS = [
+  { id: 'overview', th: 'ภาพรวม', en: 'Overview', icon: 'M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 13h7v8H3z' },
+  { id: 'health', th: 'ประสิทธิภาพอุปกรณ์', en: 'Part Performance', icon: 'M3 12h4l3-8 4 16 3-8h4' },
+  { id: 'forecast', th: 'คาดการณ์ความล้มเหลว', en: 'Failure Forecast', icon: 'M3 20l6-6 4 4 8-10M15 8h6v6' },
+  { id: 'layout', th: 'ตำแหน่งอุปกรณ์', en: 'Digital Twin Layout', icon: 'M12 2l9 5v10l-9 5-9-5V7zM12 12l9-5M12 12v10M12 12L3 7' },
+  { id: 'alerts', th: 'แจ้งเตือน & วิเคราะห์', en: 'Alerts & Diagnosis', icon: 'M12 3l10 18H2zM12 10v5M12 18v.5' },
+  { id: 'timeline', th: 'Timeline เครื่องจักร', en: 'Machine Timeline', icon: 'M3 6h18M3 12h12M3 18h7M18 15v6M15 18h6' },
+  { id: 'runtime', th: 'เวลาทำงานอุปกรณ์', en: 'Runtime Hours', icon: 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z' },
+  { id: 'model', th: 'โมเดล AI', en: 'Model Performance', icon: 'M5 5h14v14H5zM9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3' },
+  { id: 'report', th: 'รายงานเคลื่อนไหว', en: 'Activity Report', icon: 'M6 2h9l5 5v15H6zM14 2v6h6M9 13h8M9 17h8' }
+];
+const POS = {
+  CV1: { x: 11, y: 71.2, kind: 'motor', zone: 'สายพานขาเข้า (Infeed) · ฝั่งซ้ายของเครื่อง' },
+  CV2: { x: 90.2, y: 71.2, kind: 'motor', zone: 'สายพานขาออก (Outfeed) · ฝั่งขวาของเครื่อง' },
+  RAI: { x: 23.5, y: 41, kind: 'arm', zone: 'จุดกลับหม้อขาเข้า · ก่อนเข้าอุโมงค์ล้าง' },
+  RAO: { x: 80, y: 41, kind: 'arm', zone: 'จุดกลับหม้อขาออก · หลังอุโมงค์ล้าง' },
+  P1: { x: 34, y: 89, kind: 'pump', zone: 'ใต้อุโมงค์ล้าง · โซน 1' },
+  P2: { x: 46, y: 89, kind: 'pump', zone: 'ใต้อุโมงค์ล้าง · โซน 2' },
+  P3: { x: 58, y: 89, kind: 'pump', zone: 'ใต้อุโมงค์ล้าง · โซน 3' },
+  P4: { x: 70, y: 89, kind: 'pump', zone: 'ใต้อุโมงค์ล้าง · โซน 4' },
+  SV1: { x: 34, y: 17, kind: 'valve', zone: 'ท่อไอน้ำเหนืออุโมงค์ · โซน 1' },
+  SV2: { x: 46, y: 17, kind: 'valve', zone: 'ท่อไอน้ำเหนืออุโมงค์ · โซน 2' },
+  SV3: { x: 58, y: 17, kind: 'valve', zone: 'ท่อไอน้ำเหนืออุโมงค์ · โซน 3' },
+  SV4: { x: 70, y: 17, kind: 'valve', zone: 'ท่อไอน้ำเหนืออุโมงค์ · โซน 4' }
+};
+const KIND_TH = { motor: 'มอเตอร์ขับ + ชุดเกียร์', pump: 'ปั๊มหอยโข่ง (Centrifugal)', valve: 'วาล์วควบคุมไอน้ำ + Actuator', arm: 'ชุดแขนกลับหม้อ + เกียร์มอเตอร์' };
+const ACTIONS = {
+  arm: ['ตรวจแบริ่งและบูชจุดหมุนของแขนกลับหม้อ', 'ตรวจชุดเกียร์ ความตึงโซ่ และเติมสารหล่อลื่น', 'วัดกระแสมอเตอร์ขณะมีโหลด/ไม่มีโหลด เทียบค่า Nominal', 'เตรียมชุดเกียร์มอเตอร์สำรองไว้หน้างาน'],
+  motor: ['ตรวจความตึงและการเลื้อยของสายพาน', 'ตรวจแบริ่งลูกกลิ้งและมอเตอร์', 'วัดกระแสและความเร็วรอบเทียบค่า Nominal'],
+  pump: ['ตรวจซีลเพลาและการรั่วซึม', 'ตรวจใบพัดและการอุดตันของตะแกรงดูด', 'วัดกระแสมอเตอร์ปั๊มเทียบค่า Nominal'],
+  valve: ['ตรวจการเปิด-ปิดของวาล์วและ Actuator', 'สอบเทียบเซนเซอร์อุณหภูมิ', 'ตรวจ Steam trap และแรงดันไอน้ำ']
+};
+const ST = {
+  ok: { th: 'ปกติ', c: '#34D399', cls: 'st-ok' },
+  warn: { th: 'เฝ้าระวัง', c: '#FBBF24', cls: 'st-warn' },
+  crit: { th: 'วิกฤต', c: '#FF5A4E', cls: 'st-crit' },
+  off: { th: 'ไม่มีข้อมูล', c: '#94A3B8', cls: 'st-off' }
+};
+const SRANK = { off: 0, ok: 1, warn: 2, crit: 3 };
+const TH_MON = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const SPEEDS = [{ v: 1, label: '×1' }, { v: 5, label: '×5' }, { v: 15, label: '×15' }];
+const FILTERS = [{ id: 'all', label: 'ทั้งหมด' }, { id: 'decision', label: 'คำแนะนำ' }, { id: 'alarm', label: 'Alarm' }, { id: 'health', label: 'สุขภาพ Part' }, { id: 'mode', label: 'โหมดเครื่อง' }];
+const TYPE_TH = { decision: 'DECISION', alarm: 'ALARM', health: 'HEALTH', mode: 'MODE' };
+
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function parseDT(s) {
+  const p = s.split(' '); const a = p[0].split('-').map(Number); const b = (p[1] || '00:00').split(':').map(Number);
+  return new Date(a[0], a[1] - 1, a[2], b[0], b[1], 0);
+}
+function addMin(dt, m) { return new Date(dt.getTime() + m * 60000); }
+function hm(dt) { return pad(dt.getHours()) + ':' + pad(dt.getMinutes()); }
+function thDate(dt) { return dt.getDate() + ' ' + TH_MON[dt.getMonth()] + ' ' + (dt.getFullYear() + 543); }
+function shortDate(s) { const d = parseDT(s + ' 00:00'); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + (d.getFullYear() + 543); }
+function fmtDur(m) {
+  if (m == null) return '—';
+  if (m < 1) return '< 1 นาที';
+  m = Math.round(m); const h = Math.floor(m / 60), mm = m % 60;
+  return h > 0 ? h + ' ชม. ' + pad(mm) + ' น.' : mm + ' นาที';
+}
+function clock(m) { if (m == null) return '--:--'; m = Math.max(0, Math.round(m)); return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
+function lastVal(a, i) { for (let k = i; k >= 0; k--) { if (a[k] != null) return a[k]; } return null; }
+function statusOf(h) { if (h == null) return 'off'; if (h >= 80) return 'ok'; if (h >= 45) return 'warn'; return 'crit'; }
+function logY(v, lo, hi, top, bottom) {
+  const L = Math.log10(Math.min(Math.max(v, lo), hi));
+  return bottom - (bottom - top) * (L - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo));
+}
+function linePath(arr, i0, i1, X, Y) {
+  let p = '', pen = false;
+  for (let k = i0; k <= i1; k++) {
+    const v = arr[k];
+    if (v == null) { pen = false; continue; }
+    p += (pen ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(v).toFixed(1) + ' ';
+    pen = true;
+  }
+  return p || 'M0 0';
+}
+function ringDash(pct, r) { const c = 2 * Math.PI * r; const v = Math.max(0, Math.min(100, pct || 0)); return (c * v / 100).toFixed(1) + ' ' + c.toFixed(1); }
+function bands(flags, i0, i1, X) {
+  const out = []; let s = -1;
+  for (let k = i0; k <= i1 + 1; k++) {
+    const f = k <= i1 && flags(k);
+    if (f && s < 0) s = k;
+    if (!f && s >= 0) { out.push({ x: X(s).toFixed(1), w: Math.max(1, X(k - 1) - X(s)).toFixed(1) }); s = -1; }
+  }
+  return out;
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { d: null, err: null, i: 820, playing: true, speed: 1, tab: 'overview', sel: 'RAO', alertSel: 'live', filter: 'all', live: true, bkk: null };
+    this.cache = null;
+  }
+  componentDidMount() {
+    fetch(DATA_URL).then((r) => r.json()).then((d) => {
+      this.cache = this.prepare(d);
+      this.setState({ d: d, i: Math.min(this.cache.startFrame, d.replay.n - 1) });
+      this.liveSync(true);
+    }).catch((e) => this.setState({ err: String(e) }));
+    this.timer = setInterval(() => this.tick(), 1000);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  liveSync(force) {
+    if (!this.cache) return;
+    const b = bkkNow();
+    const f = Math.min(this.cache.n - 1, Math.max(0, b.h * 60 + b.mi - this.cache.t0.getHours() * 60 - this.cache.t0.getMinutes()));
+    this.setState({ i: f, bkk: b });
+  }
+  tick() {
+    const s = this.state;
+    if (s.live) { this.liveSync(false); return; }
+    if (!s.d || !s.playing) return;
+    const n = s.d.replay.n;
+    const i = s.i + s.speed;
+    if (i >= n - 1) this.setState({ i: n - 1, playing: false });
+    else this.setState({ i: i });
+  }
+  frameAt(r, hhmm) {
+    const t0 = parseDT(r.start); const t = parseDT(r.start.slice(0, 10) + ' ' + hhmm);
+    return Math.round((t - t0) / 60000);
+  }
+  prepare(d) {
+    const r = d.replay, n = r.n, t0 = parseDT(r.start);
+    const failF = Math.round((parseDT(r.failure_at.slice(0, 16)) - t0) / 60000);
+    const devMap = {}; d.devices.forEach((dv) => { devMap[dv.id] = dv; });
+    const cum = {};
+    d.devices.forEach((dv) => {
+      const a = r.ch[dv.channels[0]]; const c = new Array(n); let s = 0, st = 0, prev = 1;
+      for (let k = 0; k < n; k++) { const on = (a[k] || 0) > 0 ? 1 : 0; s += on; if (on && !prev) st++; prev = on; c[k] = [s, st]; }
+      cum[dv.id] = c;
+    });
+    const acts = [];
+    const push = (k, type, sev, text) => acts.push({ k: k, type: type, sev: sev, text: text });
+    const rdev = devMap[r.rul_device];
+    let pm = r.mode[0], pa = r.alarm[0];
+    let pact = 'none', cand = null, candK = 0;
+    const pst = {}, cst = {}, cstK = {};
+    d.devices.forEach((dv) => { pst[dv.id] = statusOf(r.health[dv.id][0]); cst[dv.id] = pst[dv.id]; cstK[dv.id] = 0; });
+    const MODE_TH = { run: 'เครื่องจักรเข้าสู่โหมดทำงานปกติ (RUN)', ramp: 'เริ่มเดินเครื่องหลังพัก (RAMP-UP)', stop: 'เครื่องจักรหยุดตามแผนพัก (PLANNED STOP)', idle: 'เครื่องจักรอยู่ในโหมด IDLE' };
+    for (let k = 1; k < n; k++) {
+      if (r.mode[k] !== pm) {
+        const fault = r.mode[k] === 'stop' && Math.abs(k - failF) <= 1;
+        push(k, 'mode', fault ? 'crit' : 'info', fault ? 'เครื่องจักรหยุดจากความเสียหาย (FAULT STOP) นอกแผนพัก · ต้นเหตุ ' + rdev.name : MODE_TH[r.mode[k]]);
+        pm = r.mode[k];
+      }
+      if (r.alarm[k] !== pa) {
+        push(k, 'alarm', r.alarm[k] ? 'warn' : 'info', r.alarm[k] ? 'AI ตรวจพบ Anomaly ต่อเนื่อง ≥ ' + d.model.k + ' นาที · score ' + (r.score[k] || 0).toFixed(2) + '× threshold' : (r.mode[k] === 'stop' ? 'Alarm ปิดเนื่องจากเครื่องหยุด (ไม่มีการประเมินขณะหยุด)' : 'Anomaly score กลับต่ำกว่า threshold'));
+        pa = r.alarm[k];
+      }
+      const ac = r.action[k] === 'watch' ? 'none' : r.action[k];
+      if (ac !== cand) { cand = ac; candK = 0; } else candK++;
+      if (candK === 8 && cand !== pact) {
+        pact = cand;
+        const rul = r.rul_min[k];
+        if (cand === 'plan_break') push(k, 'decision', 'info', 'Decision support: แนะนำซ่อมบำรุง ' + rdev.name + ' ในช่วงพักตามแผน ' + r.next_break[k] + ' น. (RUL ≈ ' + fmtDur(rul) + ')');
+        else if (cand === 'stop_before_break') push(k, 'decision', 'warn', 'คาดว่า ' + rdev.name + ' จะเสียหายก่อนช่วงพักตามแผน ' + r.next_break[k] + ' น. — วางแผนหยุดเครื่องก่อน (RUL ≈ ' + fmtDur(rul) + ')');
+        else if (cand === 'stop_now') push(k, 'decision', 'crit', 'คำสั่งด่วน: อีก ≈ ' + fmtDur(rul) + ' ' + rdev.name + ' จะเสียหาย — หยุดเครื่องจักรทันที');
+      }
+      d.devices.forEach((dv) => {
+        const h = r.health[dv.id][k]; if (h == null) return;
+        const s2 = statusOf(h);
+        if (s2 !== cst[dv.id]) { cst[dv.id] = s2; cstK[dv.id] = 0; } else cstK[dv.id]++;
+        if (cstK[dv.id] === 10 && s2 !== pst[dv.id]) {
+          push(k, 'health', s2 === 'crit' ? 'crit' : (s2 === 'warn' ? 'warn' : 'info'), dv.name + ' (' + dv.th + ') ' + ST[pst[dv.id]].th + ' → ' + ST[s2].th + ' · Health ' + h.toFixed(1) + '%');
+          pst[dv.id] = s2;
+        }
+      });
+    }
+    const today = d.timeline.find((x) => x.d === r.start.slice(0, 10));
+    const firstAlarm = d.model.table[0].first_alarm_dt;
+    const jumps = [
+      { time: '08:00', label: 'ก่อนเริ่มเสื่อมสภาพ', f: this.frameAt(r, '08:00') },
+      { time: firstAlarm ? firstAlarm.slice(11, 16) : '10:25', label: 'AI แจ้งเตือนครั้งแรก', f: firstAlarm ? this.frameAt(r, firstAlarm.slice(11, 16)) : 325 },
+      { time: '18:45', label: 'ก่อนเสียหาย ~1 ชม.', f: this.frameAt(r, '18:45') },
+      { time: r.failure_at.slice(11, 16), label: 'เครื่องหยุดจากความเสียหาย', f: failF }
+    ];
+    return { n: n, t0: t0, failF: failF, devMap: devMap, cum: cum, acts: acts, today: today, jumps: jumps, startFrame: this.frameAt(r, '18:40') };
+  }
+  sel(id) { this.setState({ sel: id }); }
+
+  renderVals() {
+    const s = this.state, d = s.d;
+    const accent = this.props.accent ?? '#22D3EE';
+    const scr = {}; TABS.forEach((t) => { scr[t.id] = s.tab === t.id; });
+    const base = { accent: accent, scr: scr, ready: !!d, loading: !d && !s.err, err: s.err, srcLabel: 'REPLAY · CSV 250k', modeCls: 'mode-stop', modeEn: '—', modeTh: '', clockTime: '--:--', clockDate: '' };
+    if (!d || !this.cache) {
+      return Object.assign(base, { tabs: [], speeds: [], jumps: [], devices: [], topRisk: [], actsShort: [], devCards: [], fcRows: [], rulEval: [], hotspots: [], alertsList: [], contrib: [], gantt: [], hourTicks: [], keyEvents: [], rtRows: [], mk: [], modelRows: [], cfg: [], splits: [], locRows: [], acts: [], daily14: [], filters: [], banner: { show: false }, sel: { ok: false, channels: [], actions: [] }, diag: { lines: [] }, scoreChart: { yTicks: [], xTicks: [], alarmRects: [] }, hiChart: { yTicks: [], xTicks: [], stops: [] }, dayChart: { stops: [], alarms: [], xTicks: [] }, lossChart: { yTicks: [] }, stab: { show: false, rows: [] }, kpi: {}, fc: {}, rt: {}, model: {}, col: {} });
+    }
+    const C = this.cache, r = d.replay, n = r.n;
+    const i = Math.max(0, Math.min(s.i, n - 1));
+    const now = addMin(C.t0, i);
+    const mode = r.mode[i];
+    const isFault = mode === 'stop' && i >= C.failF - 1 && i <= C.failF + 150;
+    const MODEI = { run: ['RUN', 'กำลังทำงาน', 'mode-run'], ramp: ['RAMP-UP', 'เริ่มเดินเครื่อง', 'mode-ramp'], stop: ['STOP', 'หยุดตามแผน', 'mode-stop'], idle: ['IDLE', 'รอทำงาน', 'mode-stop'] };
+    const mi = isFault ? ['FAULT', 'หยุดจากความเสียหาย', 'mode-fault'] : MODEI[mode];
+    const crit = d.meta.critical_hi;
+    const rdevId = r.rul_device;
+
+    // ---- device state ----
+    const devs = d.devices.map((dv) => {
+      const h = lastVal(r.health[dv.id], i);
+      const hi = lastVal(r.hi[dv.id], i);
+      let st = statusOf(h);
+      if (isFault && dv.id === rdevId) st = 'crit';
+      const ch0 = dv.channels[0];
+      const v = r.ch[ch0][i], nom = dv.nominal[ch0];
+      const dl = (v != null && nom) ? (v / nom - 1) * 100 : null;
+      const running = (v || 0) > 0;
+      const hiPrev = lastVal(r.hi[dv.id], Math.max(0, i - 60));
+      const c = C.cum[dv.id][i];
+      const runtimeH = dv.runtime_h_at_start + c[0] / 60;
+      return { dv: dv, id: dv.id, h: h, hi: hi, st: st, v: v, nom: nom, dl: dl, running: running, hiPrev: hiPrev, runtimeH: runtimeH, starts: dv.starts_at_start + c[1], pos: POS[dv.id] };
+    });
+    const devById = {}; devs.forEach((x) => { devById[x.id] = x; });
+    const rulNow = r.rul_min[i];
+    const action = r.action[i];
+    const rdev = devById[rdevId];
+    const healthStr = (h) => h == null ? '—' : h.toFixed(1) + '%';
+    const rulOf = (x) => {
+      if (x.id === rdevId && rulNow != null) return fmtDur(rulNow);
+      if (isFault && x.id === rdevId) return 'เสียหายแล้ว';
+      if (x.hi != null && x.hi > 1) return 'กำลังประเมิน';
+      return 'ไม่พบแนวโน้มเสื่อม';
+    };
+
+    // ---- banner ----
+    let banner = { show: false };
+    const nb = r.next_break[i];
+    if (isFault) banner = { show: true, cls: 'banner banner-crit', title: 'FAULT STOP · เครื่องจักรหยุดจากความเสียหาย', text: rdev.dv.name + ' (' + rdev.dv.th + ') เสียหาย — แจ้งช่างซ่อมบำรุงและเปลี่ยนอะไหล่ก่อนเดินเครื่อง', hasCount: false };
+    else if (action === 'stop_now') banner = { show: true, cls: 'banner banner-crit', title: 'อีก ' + fmtDur(rulNow) + ' ' + rdev.dv.name + ' จะเสียหาย — ต้องหยุดเครื่องจักรทันที', text: rdev.dv.th + ' · Health ' + healthStr(rdev.h) + ' · คาดว่าจะเสียเวลา ≈ ' + hm(addMin(now, rulNow)) + ' น. ก่อนถึงช่วงพักตามแผน ' + nb + ' น.', hasCount: true, count: clock(rulNow) };
+    else if (action === 'stop_before_break') banner = { show: true, cls: 'banner banner-warn', title: 'คาดว่า ' + rdev.dv.name + ' จะเสียหายก่อนช่วงพักตามแผน ' + nb + ' น.', text: 'RUL ≈ ' + fmtDur(rulNow) + ' · แนะนำวางแผนหยุดเครื่องเพื่อซ่อมบำรุงก่อนเวลาพัก', hasCount: true, count: clock(rulNow) };
+    else if (action === 'plan_break') banner = { show: true, cls: 'banner banner-info', title: 'แนะนำซ่อมบำรุง ' + rdev.dv.name + ' ในช่วงพักตามแผน ' + nb + ' น.', text: 'AI ตรวจพบการเสื่อมสภาพ · RUL ≈ ' + fmtDur(rulNow) + ' ซึ่งยาวกว่าเวลาถึงช่วงพัก', hasCount: true, count: clock(rulNow) };
+    else if (r.alarm[i]) banner = { show: true, cls: 'banner banner-warn', title: 'AI ตรวจพบความผิดปกติ — กำลังประเมินแนวโน้ม', text: 'Anomaly score ' + (r.score[i] || 0).toFixed(2) + '× threshold ต่อเนื่อง ≥ ' + d.model.k + ' นาที', hasCount: false };
+
+    // ---- KPIs ----
+    const hs = devs.filter((x) => x.h != null).map((x) => x.h);
+    let mh = hs.length ? Math.min.apply(null, hs) : null;
+    if (isFault) mh = 0;
+    const nCrit = devs.filter((x) => x.st === 'crit').length, nWarn = devs.filter((x) => x.st === 'warn').length, nOk = devs.filter((x) => x.st === 'ok').length;
+    const minOfDay = now.getHours() * 60 + now.getMinutes();
+    let runM = 0, planned = 0;
+    (C.today ? C.today.segments : []).forEach((sg) => {
+      const a = sg[0], b = Math.min(sg[1], minOfDay); if (b <= a) return;
+      if (sg[2] === 'run' || sg[2] === 'ramp') runM += b - a;
+      if (sg[2] === 'planned_stop') planned += b - a;
+    });
+    const avail = minOfDay - planned > 0 ? runM / (minOfDay - planned) * 100 : 0;
+    const main = d.model.table[0];
+    const mst = statusOf(mh);
+    const kpi = {
+      healthStr: mh == null ? '—' : Math.round(mh) + '%', healthDash: ringDash(mh, 42), healthColor: ST[mst].c, healthCls: ST[mst].cls, healthTh: ST[mst].th,
+      avail: avail.toFixed(1) + '%', runToday: fmtDur(runM),
+      alerts: String((r.alarm[i] ? 1 : 0) + nCrit + nWarn), alertColor: nCrit ? '#FF8A80' : (nWarn ? '#FCD34D' : '#F8FBFD'), nCrit: nCrit, nWarn: nWarn, nOk: nOk,
+      ap: (main.AP * 100).toFixed(1) + '%', lead: main.lead_time_h.length ? main.lead_time_h[0].toFixed(1) + ' ชม.' : '—'
+    };
+
+    // ---- tabs, controls ----
+    const tabs = TABS.map((t) => Object.assign({}, t, { cls: 'nav-btn' + (s.tab === t.id ? ' active' : ''), go: () => this.setState({ tab: t.id }), badge: t.id === 'alerts' && (nCrit + (r.alarm[i] ? 1 : 0)) ? String(nCrit + (r.alarm[i] ? 1 : 0)) : '' }));
+    const speeds = SPEEDS.map((sp) => ({ label: sp.label, cls: 'btn' + (s.speed === sp.v ? ' on' : ''), set: () => this.setState({ speed: sp.v }) }));
+    const jumps = C.jumps.map((j) => ({ time: j.time, label: j.label, go: () => this.setState({ i: j.f, playing: true, live: false }) }));
+
+    // ---- score chart (overview) ----
+    const W = 240, i0 = Math.max(0, i - W + 1);
+    const SX = (k) => 36 + (k - i0) / (W - 1) * 594;
+    const SY = (v) => logY(v, 0.3, 30, 14, 186);
+    const lastScore = lastVal(r.score, i);
+    const scoreChart = {
+      path: linePath(r.score, i0, i, SX, SY),
+      thrY: SY(1).toFixed(1), thrLblY: (SY(1) - 6).toFixed(1),
+      yTicks: [0.5, 1, 3, 10, 30].map((v) => ({ y: SY(v).toFixed(1), label: v + '×' })),
+      xTicks: [0, 60, 120, 180, 239].map((o) => ({ x: SX(i0 + o).toFixed(1), label: hm(addMin(C.t0, i0 + o)) })),
+      alarmRects: bands((k) => r.alarm[k] === 1, i0, i, SX),
+      lastX: SX(i).toFixed(1), lastY: SY(lastScore == null ? 0.3 : lastScore).toFixed(1), lastColor: r.alarm[i] ? '#FF5A4E' : accent
+    };
+    const sorted = devs.slice().sort((a, b) => (a.h == null ? 999 : a.h) - (b.h == null ? 999 : b.h));
+    if (isFault) { sorted.splice(sorted.indexOf(rdev), 1); sorted.unshift(rdev); }
+    const topRisk = sorted.slice(0, 3).map((x) => ({ name: x.dv.name, th: x.dv.th, health: isFault && x.id === rdevId ? 'FAULT' : healthStr(x.h), color: ST[x.st].c, rul: rulOf(x), go: () => this.setState({ sel: x.id, tab: 'forecast' }) }));
+    const devices = devs.map((x) => ({ id: x.id, th: x.dv.th, health: healthStr(x.h), healthPct: x.h == null ? 0 : x.h.toFixed(1), color: ST[x.st].c, go: () => this.setState({ sel: x.id, tab: 'health' }) }));
+
+    // ---- activity ----
+    const visible = C.acts.filter((a) => a.k <= i);
+    const sevCls = { info: 'st-info', warn: 'st-warn', crit: 'st-crit' };
+    const sevCol = { info: '#22D3EE', warn: '#FBBF24', crit: '#FF5A4E' };
+    const actsShort = visible.slice(-6).reverse().map((a) => ({ time: hm(addMin(C.t0, a.k)), text: a.text, color: sevCol[a.sev] }));
+    const acts = visible.filter((a) => s.filter === 'all' || a.type === s.filter).slice().reverse().map((a) => ({ time: hm(addMin(C.t0, a.k)), text: a.text, cls: sevCls[a.sev], type: TYPE_TH[a.type] }));
+    const filters = FILTERS.map((f) => ({ label: f.label, cls: 'btn' + (s.filter === f.id ? ' on' : ''), set: () => this.setState({ filter: f.id }) }));
+
+    // ---- selected part ----
+    const sx = devById[s.sel] || rdev;
+    const kind = sx.pos.kind;
+    const sel = {
+      ok: true, id: sx.id, name: sx.dv.name, th: sx.dv.th, subsystem: sx.dv.subsystem, zone: sx.pos.zone, kindTh: KIND_TH[kind],
+      isMotor: kind === 'motor', isPump: kind === 'pump', isValve: kind === 'valve', isArm: kind === 'arm',
+      stCls: ST[sx.st].cls, stTh: ST[sx.st].th, health: healthStr(sx.h), hi: sx.hi == null ? '—' : sx.hi.toFixed(2),
+      runtime: sx.runtimeH.toFixed(1) + ' ชม.', rul: rulOf(sx), chList: sx.dv.channels.join(', '),
+      channels: sx.dv.channels.map((c) => {
+        const v = r.ch[c][i], nom = sx.dv.nominal[c]; const dv2 = (v != null && nom) ? (v / nom - 1) * 100 : null;
+        return { name: c, now: v == null ? '—' : v.toFixed(2), nom: nom.toFixed(3), dev: dv2 == null ? '—' : (dv2 >= 0 ? '+' : '') + dv2.toFixed(1) + '%', color: dv2 == null ? '#93A4B6' : (Math.abs(dv2) > 10 ? '#FF8A80' : (Math.abs(dv2) > 4 ? '#FCD34D' : '#A7F3D0')) };
+      }),
+      actions: ACTIONS[kind].map((t, k) => ({ n: pad(k + 1), text: t }))
+    };
+
+    // ---- part cards ----
+    const days = d.days; const dayIdx = days.indexOf(r.start.slice(0, 10));
+    const devCards = devs.map((x) => {
+      const k = x.pos.kind;
+      const hist = x.dv.health_daily_min.slice(Math.max(0, dayIdx - 29), dayIdx + 1);
+      const eff = x.dl == null || !x.running ? null : Math.max(0, 100 - Math.abs(x.dl));
+      return {
+        id: x.id, name: x.dv.name, th: x.dv.th, subsystem: x.dv.subsystem,
+        cls: 'card-btn' + (s.sel === x.id ? ' sel' : '') + (x.st === 'crit' ? ' crit' : ''),
+        isMotor: k === 'motor', isPump: k === 'pump', isValve: k === 'valve', isArm: k === 'arm',
+        stCls: ST[x.st].cls, stTh: ST[x.st].th, color: ST[x.st].c, health: healthStr(x.h), healthPct: x.h == null ? 0 : x.h.toFixed(1),
+        eff: eff == null ? '—' : eff.toFixed(1) + '%', dLoad: x.dl == null || !x.running ? '—' : (x.dl >= 0 ? '+' : '') + x.dl.toFixed(1) + '%',
+        hi: x.hi == null ? '—' : x.hi.toFixed(2),
+        spark: hist.map((h) => ({ h: h == null ? 4 : Math.max(4, h).toFixed(0), c: ST[statusOf(h)].c })),
+        go: () => this.sel(x.id)
+      };
+    });
+
+    // ---- forecast ----
+    const fdev = rdev;
+    const toBreak = Math.round((parseDT(r.start.slice(0, 10) + ' ' + nb) - now) / 60000);
+    const toBreakFix = toBreak < 0 ? toBreak + 1440 : toBreak;
+    const ACT = {
+      stop_now: ['หยุดเครื่องจักรทันที', 'st-crit', 'คาดว่าจะเสียหายภายใน 1 ชั่วโมง — หยุดเครื่องและเปลี่ยน/ซ่อมอะไหล่ทันที เพื่อป้องกันความเสียหายลุกลามและการหยุดสายการผลิตทั้งไลน์'],
+      stop_before_break: ['หยุดก่อนช่วงพัก', 'st-warn', 'RUL สั้นกว่าเวลาถึงช่วงพักตามแผน — จัดหยุดเครื่องนอกแผนในเวลาที่ผลกระทบน้อยที่สุด และเตรียมอะไหล่ล่วงหน้า'],
+      plan_break: ['ซ่อมในช่วงพักตามแผน', 'st-info', 'RUL ยาวกว่าเวลาถึงช่วงพัก — นัดช่างเข้าซ่อมบำรุงในช่วงพักตามแผนครั้งถัดไป โดยไม่ต้องหยุดไลน์เพิ่ม'],
+      watch: ['เฝ้าระวัง', 'st-warn', 'ตรวจพบความผิดปกติ ระบบกำลังสะสมข้อมูลเพื่อประเมินแนวโน้ม'],
+      none: ['ปกติ', 'st-ok', 'ไม่พบแนวโน้มการเสื่อมสภาพที่มีนัยสำคัญ']
+    };
+    const act = isFault ? ['เสียหายแล้ว', 'st-crit', 'เครื่องหยุดจากความเสียหาย — ซ่อม/เปลี่ยนอะไหล่ แล้วรีเซ็ตสถานะ Digital Twin'] : ACT[action] || ACT.none;
+    const fc = {
+      name: fdev.dv.name, th: fdev.dv.th, rul: isFault ? '00:00' : clock(rulNow), color: isFault || action === 'stop_now' ? '#FF5A4E' : (rulNow != null ? '#FBBF24' : '#34D399'),
+      at: rulNow != null && !isFault ? hm(addMin(now, rulNow)) + ' น. · ' + thDate(addMin(now, rulNow)) : (isFault ? r.failure_at.slice(11, 16) + ' น. (เกิดขึ้นแล้ว)' : '—'),
+      actTh: act[0], actCls: act[1], actText: act[2], nextBreak: nb + ' น.', toBreak: fmtDur(toBreakFix)
+    };
+    const cdev = devById[s.sel] || rdev;
+    const HX = (k) => 44 + k / (n - 1) * 706;
+    const HY = (v) => logY(v, 0.3, 100, 16, 236);
+    let proj = 'M0 0', failX = 0, hasFail = false;
+    if (cdev.id === rdevId && rulNow != null && cdev.hi != null && !isFault) {
+      const kEnd = i + rulNow;
+      const kClip = Math.min(kEnd, n - 1);
+      const frac = kEnd > i ? (kClip - i) / (kEnd - i) : 1;
+      const lv = Math.log10(cdev.hi) + frac * (Math.log10(crit) - Math.log10(cdev.hi));
+      proj = 'M' + HX(i).toFixed(1) + ' ' + HY(cdev.hi).toFixed(1) + ' L' + HX(kClip).toFixed(1) + ' ' + HY(Math.pow(10, lv)).toFixed(1);
+      if (kEnd <= n - 1) { hasFail = true; failX = HX(kEnd).toFixed(1); }
+    }
+    const xt = []; for (let k = 0; k < n; k += 120) xt.push({ x: HX(k).toFixed(1), label: hm(addMin(C.t0, k)) });
+    const hiChart = {
+      dev: cdev.dv.name, hist: linePath(r.hi[cdev.id], 0, i, HX, HY), proj: proj, hasFail: hasFail, failX: failX,
+      thrY: HY(1).toFixed(1), thrLblY: (HY(1) - 6).toFixed(1), critY: HY(crit).toFixed(1), critLblY: (HY(crit) - 6).toFixed(1), crit: crit.toFixed(0),
+      nowX: HX(i).toFixed(1), xTicks: xt,
+      yTicks: [0.5, 1, 3, 10, 30, 100].map((v) => ({ y: HY(v).toFixed(1), label: String(v) })),
+      stops: bands((k) => r.mode[k] === 'stop', 0, i, HX)
+    };
+    const fcRows = sorted.map((x) => {
+      const tr = (x.hi != null && x.hiPrev != null && x.hiPrev > 0) ? (x.hi / x.hiPrev - 1) * 100 : null;
+      const rec = x.id === rdevId && (rulNow != null || isFault) ? act[0] : (x.st === 'ok' ? 'เดินเครื่องตามปกติ' : (x.st === 'warn' ? 'ตรวจสอบในช่วงพักถัดไป' : 'ตรวจสอบโดยด่วน'));
+      return {
+        id: x.id, th: x.dv.th, go: () => this.sel(x.id), rowCls: 'trow' + (s.sel === x.id ? ' hl' : ''),
+        stCls: ST[x.st].cls, stTh: ST[x.st].th, color: ST[x.st].c, health: healthStr(x.h), hi: x.hi == null ? '—' : x.hi.toFixed(2),
+        trend: tr == null ? '—' : (tr >= 0 ? '+' : '') + tr.toFixed(0) + '%', trendColor: tr != null && tr > 25 ? '#FF8A80' : '#A9B6C4',
+        rul: rulOf(x), rec: rec
+      };
+    });
+    const rulEval = (d.model.rul_eval || []).map((e) => {
+      const err = e.pred_min - e.true_op_min;
+      return { h: e.checkpoint_h_before + ' ชม.', t: e.t.slice(11, 16), pred: fmtDur(e.pred_min), truth: fmtDur(e.true_op_min), err: (err >= 0 ? '+' : '−') + fmtDur(Math.abs(err)), color: Math.abs(err) <= 30 ? '#A7F3D0' : (Math.abs(err) <= 90 ? '#FCD34D' : '#FF8A80') };
+    });
+
+    // ---- layout ----
+    const col = {}; devs.forEach((x) => { col[x.id] = ST[x.st].c; });
+    const hotspots = devs.map((x) => ({ id: x.id, x: x.pos.x, y: x.pos.y, color: ST[x.st].c, cls: 'hot hot-' + x.st + (s.sel === x.id ? ' sel' : ''), aria: x.dv.name + ' ' + ST[x.st].th, go: () => this.sel(x.id) }));
+    const twinCls = 'twin' + (mode === 'stop' ? ' paused' : '');
+
+    // ---- alerts & diagnosis ----
+    const hist = d.alerts.filter((a) => parseDT(a.t.slice(0, 16)) <= now).slice().reverse();
+    const ranked = devs.filter((x) => x.hi != null).sort((a, b) => b.hi - a.hi);
+    const liveTop = isFault ? rdev : ranked[0];
+    const alertsList = [];
+    if (r.alarm[i] || isFault || (action && action !== 'none')) {
+      alertsList.push({ key: 'live', title: (isFault ? 'FAULT · ' : 'ACTIVE · ') + liveTop.dv.name, sub: isFault ? 'เครื่องหยุดจากความเสียหาย' : 'HI ' + (liveTop.hi || 0).toFixed(1) + '× · ' + (ACT[action] || ACT.watch)[0], when: hm(now) + ' · ' + thDate(now), sevTh: isFault || action === 'stop_now' ? 'CRITICAL' : 'WARNING', sevCls: isFault || action === 'stop_now' ? 'st-crit' : 'st-warn', color: isFault || action === 'stop_now' ? '#FF5A4E' : '#FBBF24' });
+    }
+    hist.forEach((a, k) => {
+      const tm = a.t.slice(11, 16);
+      const ramp = /^(06:3|06:4|18:3|18:4|16:0)/.test(tm);
+      alertsList.push({ key: 'h' + k, a: a, title: C.devMap[a.device].name, sub: a.channel + ' · peak ' + a.peak + '× · ' + a.dur_min + ' นาที', when: tm + ' · ' + thDate(parseDT(a.t.slice(0, 16))) + ' · ' + a.part.toUpperCase(), sevTh: a.peak >= 3 ? 'CRITICAL' : (a.dur_min >= 30 ? 'WARNING' : 'MINOR'), sevCls: a.peak >= 3 ? 'st-crit' : (a.dur_min >= 30 ? 'st-warn' : 'st-off'), color: a.peak >= 3 ? '#FF5A4E' : (a.dur_min >= 30 ? '#FBBF24' : '#94A3B8'), ramp: ramp });
+    });
+    let selKey = s.alertSel; if (!alertsList.find((x) => x.key === selKey)) selKey = alertsList.length ? alertsList[0].key : 'live';
+    const selAlert = alertsList.find((x) => x.key === selKey);
+    alertsList.forEach((x) => { x.cls = 'row-btn' + (x.key === selKey ? ' sel' : ''); x.pick = () => this.setState({ alertSel: x.key }); });
+    let diag;
+    if (selAlert && selAlert.a) {
+      const a = selAlert.a; const dv = C.devMap[a.device];
+      const lines = [
+        { text: 'เวลา ' + a.t.slice(0, 16) + ' ถึง ' + a.end.slice(11, 16) + ' (' + a.dur_min + ' นาที) · ช่วงข้อมูล ' + a.part.toUpperCase() },
+        { text: 'Channel ที่มี error สูงสุด: ' + a.channel + ' · peak score ' + a.peak + '× threshold' }
+      ];
+      if (selAlert.ramp && a.peak < 1.5) lines.push({ text: 'เกิดช่วงเปลี่ยนโหมดหลังพักเครื่อง (Ramp-up → Run) และ score เกิน threshold เพียงเล็กน้อย → จัดเป็น False alarm จากการเปลี่ยนโหมด ไม่ต้องดำเนินการ' });
+      else if (a.peak >= 3) lines.push({ text: 'Score สูงกว่า threshold หลายเท่าและต่อเนื่องยาว → ความผิดปกติจริงของอุปกรณ์ (ดูผลวิเคราะห์สถานะปัจจุบันในเหตุการณ์ ACTIVE)' });
+      else lines.push({ text: 'Score เกิน threshold เล็กน้อยและสั้น → ความผิดปกติชั่วขณะ ตรวจสอบตามรอบปกติ' });
+      diag = { context: 'การแจ้งเตือนย้อนหลัง', dev: dv.name, devTh: dv.th, type: selAlert.ramp && a.peak < 1.5 ? 'False alarm (mode transition)' : (a.peak >= 3 ? 'Motor Condition' : 'Transient'), typeCls: a.peak >= 3 ? 'st-crit' : 'st-off', lines: lines };
+    } else {
+      const D = liveTop; const lines = [];
+      if (!D || D.hi == null || (D.hi <= 1 && !isFault)) {
+        diag = { context: 'สถานะปัจจุบัน', dev: 'ทุก Part อยู่ในเกณฑ์ปกติ', devTh: '', type: 'Normal', typeCls: 'st-ok', lines: [{ text: 'Reconstruction error ของทุกช่องสัญญาณต่ำกว่า threshold ของโหมด ' + mi[0] }] };
+      } else {
+        lines.push({ text: 'ตรวจพบ ' + D.dv.name + ' มี Reconstruction error สูงกว่าปกติ ' + D.hi.toFixed(1) + ' เท่า (Health ' + healthStr(D.h) + ')' });
+        const devs2 = D.dv.channels.map((c) => {
+          let sm = 0, cnt = 0;
+          for (let k = Math.max(0, i - 29); k <= i; k++) { const v0 = r.ch[c][k]; if (v0 != null && v0 > 0) { sm += v0; cnt++; } }
+          const v = cnt ? sm / cnt : lastVal(r.ch[c], i); const nm = D.dv.nominal[c];
+          return { c: c, v: v, nm: nm, p: v != null && nm ? (v / nm - 1) * 100 : 0 };
+        });
+        lines.push({ text: 'ค่าเฉลี่ย 30 นาที: ' + devs2.map((x) => x.c + ' = ' + (x.v == null ? '—' : x.v.toFixed(3)) + ' (ปกติ ' + x.nm.toFixed(3) + ', ' + (x.p >= 0 ? '+' : '') + x.p.toFixed(1) + '%)').join(' · ') });
+        let type = 'Motor Condition', typeCls = 'st-crit';
+        if (devs2.length >= 2) {
+          const big = devs2.filter((x) => Math.abs(x.p) > 2.5).length, small = devs2.filter((x) => Math.abs(x.p) < 1).length;
+          if (big >= 2 || isFault) lines.push({ text: 'Channel ที่สัมพันธ์กันทางกายภาพ (Load และ No-Load) เบี่ยงเบนไปทางเดียวกันพร้อมกัน → บ่งชี้การเสื่อมสภาพเชิงกล (Motor/Mechanical Condition) เช่น แบริ่งสึก หรือแรงเสียดทานชุดเกียร์เพิ่มขึ้น ไม่ใช่ Sensor Fault' });
+          else if (big === 1 && small >= 1) { lines.push({ text: 'ความผิดปกติกระจุกที่ Channel เดียวโดย Channel คู่ไม่เปลี่ยนแปลง → สงสัย Sensor Fault ให้ตรวจเซนเซอร์และสายสัญญาณ' }); type = 'Sensor Fault (suspected)'; typeCls = 'st-warn'; }
+          else { lines.push({ text: 'ระยะเริ่มต้น: ค่าเฉลี่ยยังเบี่ยงเบนไม่มาก แต่รูปแบบเชิงเวลาผิดไปจากที่โมเดลเรียนรู้ → ติดตามต่อเนื่องเพื่อแยก Motor Condition / Sensor Fault' }); type = 'Early anomaly'; typeCls = 'st-warn'; }
+        }
+        const others = devs.filter((x) => x.dv.subsystem !== D.dv.subsystem && x.hi != null && x.hi > 1);
+        lines.push({ text: others.length === 0 ? 'Subsystem อื่น (Fluid, Thermal) อยู่ในเกณฑ์ปกติ → ความผิดปกติจำกัดอยู่ที่ Subsystem ' + D.dv.subsystem : 'พบความผิดปกติร่วมใน ' + others.map((x) => x.id).join(', ') + ' → ตรวจสอบความสัมพันธ์ข้าม Subsystem' });
+        if (D.hiPrev != null) lines.push({ text: 'แนวโน้ม 60 นาทีล่าสุด: HI ' + D.hiPrev.toFixed(1) + ' → ' + D.hi.toFixed(1) + ' (' + ((D.hi / D.hiPrev - 1) * 100 >= 0 ? '+' : '') + ((D.hi / D.hiPrev - 1) * 100).toFixed(0) + '%)' });
+        if (D.id === rdevId) lines.push({ text: isFault ? 'เครื่องหยุดจากความเสียหายแล้ว — เปลี่ยนอะไหล่: ' + KIND_TH[D.pos.kind] : 'RUL ≈ ' + fmtDur(rulNow) + ' · คำแนะนำ: ' + act[0] + ' (ช่วงพักถัดไป ' + nb + ' น.)' });
+        diag = { context: isFault ? 'FAULT · สถานะปัจจุบัน' : 'สถานะปัจจุบัน · ' + hm(now), dev: D.dv.name, devTh: D.dv.th, type: type, typeCls: typeCls, lines: lines };
+      }
+    }
+    const lc = Math.log10(1 + crit);
+    const contrib = ranked.map((x, k) => ({ rank: k + 1, name: x.id + ' · ' + x.dv.name, w: Math.min(100, Math.log10(1 + x.hi) / lc * 100).toFixed(1), hi: x.hi.toFixed(2) + '×', color: ST[x.st].c }));
+
+    // ---- timeline ----
+    const rday = r.start.slice(0, 10);
+    const SEGTH = { run: 'RUN', ramp: 'RAMP-UP', planned_stop: 'พักตามแผน', stop: 'หยุดนอกแผน', fault: 'FAULT' };
+    const gantt = d.timeline.map((day) => {
+      const isToday = day.d === rday;
+      const segs = [];
+      day.segments.forEach((sg) => {
+        let a = sg[0], b = sg[1];
+        if (isToday) { if (a >= minOfDay) return; b = Math.min(b, minOfDay); }
+        segs.push({ cls: 'seg seg-' + sg[2], l: (a / 1440 * 100).toFixed(2), w: Math.max(0.15, (b - a) / 1440 * 100).toFixed(2), title: SEGTH[sg[2]] + ' ' + clock(a) + '–' + clock(b) });
+      });
+      return { label: shortDate(day.d), isToday: isToday, nowX: (minOfDay / 1440 * 100).toFixed(2), segs: segs, lblColor: isToday ? '#67E8F9' : '#A9B6C4' };
+    }).reverse();
+    const hourTicks = [0, 3, 6, 9, 12, 15, 18, 21, 24].map((h) => ({ x: (h / 24 * 100).toFixed(2), label: pad(h % 24) + ':00' }));
+    const DX = (k) => 30 + k / (n - 1) * 965;
+    const DY = (v) => logY(v, 0.3, 30, 10, 128);
+    const dxt = []; for (let k = 0; k < n; k += 120) dxt.push({ x: DX(k).toFixed(1), label: hm(addMin(C.t0, k)) });
+    const dayChart = { path: linePath(r.score, 0, i, DX, DY), thrY: DY(1).toFixed(1), nowX: DX(i).toFixed(1), xTicks: dxt, stops: bands((k) => r.mode[k] === 'stop', 0, i, DX), alarms: bands((k) => r.alarm[k] === 1, 0, i, DX) };
+    const keyEvents = visible.filter((a) => a.type !== 'health').slice(-12).reverse().map((a) => ({ time: hm(addMin(C.t0, a.k)), text: a.text, color: sevCol[a.sev] }));
+
+    // ---- runtime ----
+    const maxH = Math.max.apply(null, devs.map((x) => x.runtimeH));
+    const nDays = dayIdx + minOfDay / 1440;
+    const rtRows = devs.map((x) => ({ id: x.id, th: x.dv.th, hours: x.runtimeH.toFixed(1) + ' ชม.', w: (x.runtimeH / maxH * 100).toFixed(1), starts: x.starts, perDay: (x.runtimeH / nDays).toFixed(1) + ' ชม.', stCls: x.running ? 'st-ok' : 'st-off', state: x.running ? 'กำลังทำงาน' : 'หยุด' }));
+    let prevRun = 0; for (let k = 0; k < dayIdx; k++) prevRun += d.daily[k].run_h;
+    const machineH = prevRun + runM / 60;
+    const rt = { machineH: machineH.toFixed(1) + ' ชม.', since: thDate(parseDT(d.meta.period[0].slice(0, 16))), todayH: fmtDur(runM), util: (machineH / (nDays * 24) * 100).toFixed(1) + '%', days: String(dayIdx + 1) };
+
+    // ---- model ----
+    const tb = d.model.table;
+    const pctOf = (v) => v == null ? '—' : (v * 100).toFixed(1) + '%';
+    const loc = d.model.localization[0];
+    const hit1 = loc && loc.top_devices[0] === rdevId;
+    const mk = [
+      { label: 'Average Precision', sub: 'Threshold-free · Test', val: pctOf(main.AP), dash: ringDash(main.AP * 100, 40), color: '#22D3EE' },
+      { label: 'Event Recall', sub: 'ตรวจพบเหตุการณ์ความเสียหาย', val: pctOf(main.event_recall), dash: ringDash(main.event_recall * 100, 40), color: '#34D399' },
+      { label: 'Event Precision', sub: 'Alarm episode ที่ถูกต้อง', val: pctOf(main.event_precision), dash: ringDash(main.event_precision * 100, 40), color: '#FBBF24' },
+      { label: 'Event F0.5', sub: 'เน้น Precision มากกว่า Recall', val: pctOf(main['event_F0.5']), dash: ringDash(main['event_F0.5'] * 100, 40), color: '#A78BFA' },
+      { label: 'Localization Hit@1', sub: 'ระบุ Part ต้นเหตุถูกอันดับ 1', val: hit1 ? '100.0%' : '0.0%', dash: ringDash(hit1 ? 100 : 0, 40), color: '#F472B6' },
+      { label: 'Detection Lead Time', sub: 'ล่วงหน้า ' + kpi.lead + ' จากกรอบ ' + d.model.eval.horizon_h + ' ชม. · FA ' + main.FA_per_week + '/สัปดาห์', val: (Math.min(100, (main.lead_time_h[0] || 0) / d.model.eval.horizon_h * 100)).toFixed(1) + '%', dash: ringDash(Math.min(100, (main.lead_time_h[0] || 0) / d.model.eval.horizon_h * 100), 40), color: '#FB923C' }
+    ];
+    const modelRows = tb.map((t, k) => ({ name: t.name, ap: pctOf(t.AP), f05: t['event_F0.5'].toFixed(3), fa: t.FA_per_week.toFixed(2), lead: t.lead_time_h.length ? t.lead_time_h[0].toFixed(2) + ' h' : 'ไม่ตรวจพบ', first: t.first_alarm_dt ? t.first_alarm_dt.slice(5, 16) : '—', cls: 'trow' + (k === 0 ? ' hl' : '') }));
+    const ls = d.model.loss, vl = d.model.val_loss;
+    const lmin = Math.min.apply(null, ls.concat(vl)), lmax = Math.max.apply(null, ls.concat(vl));
+    const LX = (k) => 44 + k / (ls.length - 1) * 466;
+    const LY = (v) => 180 - (v - lmin) / (lmax - lmin) * 164;
+    const lossChart = { train: linePath(ls, 0, ls.length - 1, LX, LY), val: linePath(vl, 0, vl.length - 1, LX, LY), yTicks: [lmin, lmin + (lmax - lmin) / 3, lmin + 2 * (lmax - lmin) / 3, lmax].map((v) => ({ y: LY(v).toFixed(1), label: v.toFixed(2) })) };
+    const th = d.model.thresholds;
+    const cfg = [
+      { k: 'Architecture', v: 'LSTM Autoencoder (seq2seq)' },
+      { k: 'Window length w', v: d.model.window + ' นาที' },
+      { k: 'Input channels d', v: d.model.channels + ' channels' },
+      { k: 'Encoder depth', v: d.model.depth + ' layers (32 → 8)' },
+      { k: 'Latent dimension', v: d.model.latent + ' units' },
+      { k: 'Optimizer / LR', v: 'Adam · 0.001' },
+      { k: 'Batch size', v: '128' },
+      { k: 'Loss', v: 'Mean squared error' },
+      { k: 'Early stopping', v: 'patience 10 · ' + d.model.epochs + ' epochs' },
+      { k: 'Parameters', v: d.model.params.toLocaleString() },
+      { k: 'Threshold (RUN / RAMP)', v: th.run.toFixed(3) + ' / ' + th.ramp.toFixed(3) },
+      { k: 'Persistence k', v: d.model.k + ' นาที' }
+    ];
+    const sp = d.meta.split;
+    const splits = [['Train', sp.train], ['Validation', sp.val], ['Test', sp.test]].map((x) => ({ name: x[0], range: shortDate(x[1][0].slice(0, 10)) + ' – ' + shortDate(x[1][1].slice(0, 10)), rows: x[1][2].toLocaleString() + ' แถว' }));
+    const locRows = loc ? [
+      { k: 'เหตุการณ์', v: shortDate(loc.event.slice(0, 10)) + ' ' + loc.event.slice(11, 16) },
+      { k: 'Top-3 channels', v: loc.top_channels.join(', ') },
+      { k: 'Top-3 Parts', v: loc.top_devices.join(' > ') },
+      { k: 'Hit@1 / Hit@3', v: (hit1 ? '1/1' : '0/1') + ' · ' + (loc.top_devices.indexOf(rdevId) >= 0 ? '1/1' : '0/1') }
+    ] : [];
+    const st0 = d.model.stability;
+    const stab = st0 ? { show: true, n: st0.n, rows: st0.rows } : { show: false, rows: [] };
+    const model = { pct: main.percentile, k: d.model.k, horizon: d.model.eval.horizon_h, epochs: d.model.epochs };
+
+    // ---- daily ----
+    const daily14 = d.daily.slice(Math.max(0, dayIdx - 14), dayIdx).reverse().map((x) => ({ d: shortDate(x.d), run: x.run_h.toFixed(1), stop: x.stop_h.toFixed(1), alarm: x.alarm_min, alarmColor: x.alarm_min > 0 ? '#FCD34D' : '#A9B6C4', max: x.max_score == null ? '—' : x.max_score.toFixed(2) + '×' }));
+
+    const bk = s.live && s.bkk ? s.bkk : null;
+    const liveDate = bk ? new Date(bk.y, bk.mo - 1, bk.d) : null;
+    return Object.assign(base, {
+      modeCls: mi[2], modeEn: mi[0], modeTh: mi[1],
+      clockTime: bk ? pad(bk.h) + ':' + pad(bk.mi) : hm(now), clockSec: bk ? ':' + pad(bk.s) : '',
+      clockDate: bk ? thDate(liveDate) + ' · เวลาประเทศไทย (UTC+7)' : thDate(now) + ' · Replay',
+      srcLabel: s.live ? 'LIVE · เวลาไทย' : 'REPLAY · CSV 250k',
+      liveNote: 'ข้อมูล ณ เวลาเดียวกันจากบันทึกวันที่ ' + thDate(C.t0) + ' (รอเชื่อม API จริง)',
+      tabs: tabs, speeds: speeds, jumps: jumps, playLabel: s.playing ? 'หยุดชั่วคราว' : 'เล่น', playIcon: s.playing ? 'M8 5v14M16 5v14' : 'M7 5l12 7-12 7z',
+      togglePlay: () => this.setState({ playing: !s.playing }), maxFrame: n - 1, frame: i,
+      onScrub: (e) => this.setState({ i: parseInt(e.target.value, 10) || 0, live: false }),
+      isLive: s.live, isReplay: !s.live, goLive: () => { this.setState({ live: true }); setTimeout(() => this.liveSync(true), 0); }, goReplay: () => this.setState({ live: false, playing: true }),
+      replayStartLbl: hm(C.t0), replayEndLbl: hm(addMin(C.t0, n - 1)),
+      banner: banner, kpi: kpi, scoreChart: scoreChart, topRisk: topRisk, devices: devices, nextBreak: nb + ' น.',
+      goLayout: () => this.setState({ tab: 'layout' }), goReport: () => this.setState({ tab: 'report' }),
+      actsShort: actsShort, acts: acts, noActs: acts.length === 0, filters: filters,
+      sel: sel, devCards: devCards, fc: fc, hiChart: hiChart, fcRows: fcRows, rulEval: rulEval,
+      col: col, hotspots: hotspots, twinCls: twinCls,
+      alertsList: alertsList, alertCount: alertsList.length, diag: diag, contrib: contrib,
+      gantt: gantt, hourTicks: hourTicks, dayChart: dayChart, keyEvents: keyEvents,
+      rtRows: rtRows, rt: rt, mk: mk, modelRows: modelRows, lossChart: lossChart, cfg: cfg, splits: splits, locRows: locRows, stab: stab, model: model,
+      daily14: daily14, dataInfo: d.meta.rows.toLocaleString() + ' rows · ' + shortDate(d.meta.period[0].slice(0, 10)) + '–' + shortDate(d.meta.period[1].slice(0, 10)) + ' · 1-min sampling'
+    });
+  }
+}
+
+(function () {
+  const comp = new Component({});
+  const v = Vue.shallowRef(comp.renderVals());
+  let queued = false;
+  comp.__onUpdate = function () {
+    if (queued) return; queued = true;
+    Promise.resolve().then(function () { queued = false; v.value = comp.renderVals(); });
+  };
+  Vue.createApp({ setup: function () { return { v: v }; }, template: '#tpl' }).mount('#app');
+  comp.componentDidMount();
+})();
+</script>
+</body>
+</html>
